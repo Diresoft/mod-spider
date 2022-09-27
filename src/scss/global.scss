@@ -1,0 +1,15 @@
+// -- Forward Styles --
+@forward "colours.scss";
+@forward "modal.scss";
+
+// -- Use Styles --
+@use "colours.scss";
+@use "modal.scss";
+
+
+body {
+	font-family: sans-serif;
+
+	color: colours.$soft-white;
+	background-color: colours.$cool-grey;
+}

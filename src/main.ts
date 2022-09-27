@@ -1,0 +1,10 @@
+import "./style.css";
+import "./scss/global.scss";
+import App from "./App.svelte";
+
+const app = new App({
+  target: document.getElementById("app"),
+  intro: true
+});
+
+export default app;
