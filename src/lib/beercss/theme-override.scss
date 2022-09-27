@@ -1,0 +1,107 @@
+@use 'sass:color';
+
+@function on( $col )
+{
+	@return color.adjust( $col, $lightness: 50%, $hue: 75deg, $saturation: -30% );
+
+}
+
+$black: #050505;
+$white: #f0f0f0;
+
+
+$bg: rgb(19, 20, 19);
+
+
+$primary:			green;
+$primary-container:	$primary;
+
+
+$secondary:			rgb(255, 255, 255);
+$secondary-container: $secondary;
+
+$text_col: $white;
+
+// ModMaster specific schemes/vars
+:root
+{
+	--chrome-border: rgb(37, 58, 37); //#{ color.adjust( $bg, $lightness: -10% ) };
+}
+
+:root,
+body.dark {
+	--primary:#78dc77;
+	--on-primary:#003907;
+	--primary-container:#00530f;
+	--on-primary-container:#93f990;
+	--secondary:#b9ccb3;
+	--on-secondary:#253423;
+	--secondary-container:#3b4b38;
+	--on-secondary-container:#d5e8ce;
+	--tertiary:#a1cfd5;
+	--on-tertiary:#00363b;
+	--tertiary-container:#1e4d52;
+	--on-tertiary-container:#bcebf0;
+	--error:#ffb4a9;
+	--error-container:#930006;
+	--on-error:#680003;
+	--on-error-container:#ffdad4;
+	--background: #{ $bg };
+	--on-background:#e2e3dd;
+	--surface:#1a1c19;
+	--on-surface:#e2e3dd;
+	--surface-variant:#424840;
+	--on-surface-variant:#c2c8bd;
+	--outline:#8c9288;
+	--inverse-on-surface:#1a1c19;
+	--inverse-surface:#e2e3dd;
+	--inverse-primary:#006e17;
+	--shadow:#000000;
+}
+
+
+
+old {
+	--primary:		#{  $primary	};
+	--on-primary:	#{  $white		};
+
+	--primary-container:	#{ $primary-container	};
+	--on-primary-container:	#{ $white				};
+
+	--secondary:	#{ $secondary			};
+	--on-secondary: #{ $white				};
+
+	--secondary-container:#{ $secondary-container };
+	--on-secondary-container:#cde7ec;
+
+	--tertiary:#bac6ea;
+	--on-tertiary:#24304d;
+
+	--tertiary-container:#3b4664;
+	--on-tertiary-container:#d9e2ff;
+
+	--body: #{ $bg };
+
+	--error:#ffb4a9;
+	--on-error:#680003;
+
+	--error-container:#930006;
+	--on-error-container:#ffdad4;
+
+	--background:		#{  $primary	};
+	--on-background:	#{  $white		};
+
+	--surface:		#{ $bg			};
+	--on-surface:	#{ $text_col	};
+
+	--surface-variant:#3f484a;
+	--on-surface-variant:#bfc8ca;
+
+	--outline: #{ $white };
+
+	--inverse-on-surface:#191c1d;
+	--inverse-surface:#e0e3e3;
+	--inverse-primary:#006874;
+
+	--shadow:#000000;
+}

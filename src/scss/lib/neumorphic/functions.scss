@@ -1,0 +1,79 @@
+// Sass Modules
+@use 'sass:color';
+@use 'sass:math';
+@use 'sass:map';
+
+@use '@sass-fairy/url';
+
+@function units( $val )
+{
+	@return ($val * 0 + 1);
+}
+
+@function unitless( $val ) {
+	@return math.div( $val, units( $val ) );
+}
+
+@function cornerRadiusToBlendPercentage( $radius ) {
+	@return math.div( $radius, ( $radius * 0 + 1 ) ) * 5;
+}
+
+@function computeLighting( $height, $light-info, $surface-colour )
+{
+	/**
+	* | Symbol | Description 
+	* | ------ | -----------
+	* | H      | "Height" of the slab in the 'Z' axis
+	* | Theta  | "Yaw" of the light. A rotation around the 'Z' axis
+	* | Phi    | "Pitch" of the light. A rotation on an axis perpendicular to the x/y plane
+	* | L      | "Length" of the shadow cast by the slab
+	* | x      | X component of the shadow's 'L' axis
+	* | y      | Y component of the shadow's 'L' axis
+	* | x_pct  | (0, 1) normalized version of 'x'
+	* | y_pct  | (0, 1) normalized version of 'y'
+	*
+	* L = H * tan( Phi )
+	* x_pct = sin( Theta )
+	* y_pct = cos( Theta )
+    * x = L * x_pct
+	* y = L * y_pct
+	*/
+
+	$L: $height * math.tan( map.get( $light-info, 'pitch' ) );
+	$x_pct: math.sin( map.get( $light-info, 'yaw' ) );
+	$y_pct: math.cos( map.get( $light-info, 'yaw' ) );
+
+	@return (
+		"shadow-length": $L,
+		"offset-pct-x": $x_pct,
+		"offset-pct-y": $y_pct,
+		"offset-x": $L * $x_pct,
+		"offset-y": $L * $y_pct,
+		"surface": (
+			"lit": color.scale( $surface-colour, $lightness: map.get( $light-info, "strength" )		 ),
+			"mid": $surface-colour,
+			"drk": color.scale( $surface-colour, $lightness: map.get( $light-info, "strength" ) * -3 ),
+			"sha": color.scale( $surface-colour, $lightness: map.get( $light-info, "strength" ) * -3, $alpha: -20% ),
+		)
+	);
+}
+
+@function slopeToDistance( $height, $theta ) {
+	@return ( $height * math.tan($theta) );
+}
+
+
+@function makeBorderSVGUrl( $lit, $mid, $drk, $off-x, $off-y, $r, $s ) {
+	$blend: cornerRadiusToBlendPercentage( $r );
+	@return url.svg(
+'<svg width="#{$s * 1px}" height="#{$s * 1px}" viewBox="0 0 #{$s} #{$s}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">'
+	'<defs>'
+		'<linearGradient id="neumorphic-bg-linear" x1="#{ 50% - ($off-x * 50) }" y1="#{ 50% - ($off-y * 50) }" x2="#{ 50% + ($off-x * 50) }" y2="#{ 50% + ($off-y * 50) }">'
+			'<stop offset="#{ 50% - $blend }" stop-color="#{$lit}" />'
+			'<stop offset="#{ 50%          }" stop-color="#{$mid}" />'
+			'<stop offset="#{ 50% + $blend }" stop-color="#{$drk}" />'
+		'</linearGradient>'
+	'</defs>'
+	'<rect fill="url(\'#neumorphic-bg-linear\')" x="0" y="0" ry="#{$s}" width="#{$s}" height="#{$s}" />'
+'</svg>' );
+}

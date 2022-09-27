@@ -1,0 +1,22 @@
+// --------
+// | Uses |
+// --------
+@use '@scss/lib/neumorphic.scss';
+
+@use '@scss/theme.scss' as *;
+
+
+* {
+	box-sizing: border-box;
+	user-select: none;
+}
+
+body {
+	padding: 0;
+	margin: 0;
+
+	font-family: sans-serif;
+
+	color: white;
+	background-color: $window-bg;
+}

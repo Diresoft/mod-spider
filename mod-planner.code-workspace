@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"cSpell.words": [
+			"clazz",
+			"dragabort",
+			"neumorphic",
+			"neumorphism",
+			"sassdash",
+			"sveltejs",
+			"Unlisten",
+			"Unlistener"
+		]
+	},
+	"launch": {
+		"version": "0.2.0"
+	}
+}

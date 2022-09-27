@@ -1,0 +1,1 @@
+<span class='material-symbol'><slot></slot></span>

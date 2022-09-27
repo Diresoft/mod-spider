@@ -1,0 +1,1 @@
+export const CTX_SEARCH_STRING = Symbol('Search String Context Key');
