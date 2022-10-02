@@ -37,11 +37,10 @@ $offset-x:			map.get( $lighting, "offset-x" );
 $offset-y:			map.get( $lighting, "offset-y" );
 
 
-
-$l: 80;
-$r: 200;
-$ob: 10px;
-$ib: 2px;
+$l: 200;
+$r: 30;
+$ob: 8px;
+$ib: 1px;
 
 @mixin edge-defs( $lit, $mid, $drk, $off-x, $off-y, $t, $r, $s )
 {
@@ -58,75 +57,30 @@ $ib: 2px;
 			@include svg_encode( 'stop', ( offset: 50%,			 stop-color: $mid ) );
 			@include svg_encode( 'stop', ( offset: 50% + $blend, stop-color: $drk ) );
 		}
-		@include svg_encode( 'filter', ( id: "neumorphic-edge-curve-blur" ) )
-		{
-			@include svg_encode( 'feGaussianBlur', (
-				"in": "SourceGraphic",
-				"stdDeviation": "2"
-			));
-		}
-		@include svg_encode( 'mask', ( id: "neumorphic-edge-clip" ) )
-		{
-			@include svg_encode( 'rect', (
-				x:		0,
-				y:		0,
-				width:	$s,
-				height: $s,
-				fill: black
-			));
-			$inset: $t * 0.50;
-			@include svg_encode( 'rect', (
-				x:		$inset,
-				y:		$inset,
-				rx:     $r,
-				width:	$s - ($inset * 2),
-				height:	$s - ($inset * 2),
-				fill: white
-			));
-		}
-		@include svg_encode( 'mask', ( id: "neumorphic-inner-region" ) )
-		{
-			@include svg_encode( 'rect', (
-				x:		0,
-				y:		0,
-				width:	$s,
-				height: $s,
-				fill: black
-			));
-			$inset: $t * 0.5;
-			@include svg_encode( 'rect', (
-				x:		$inset,
-				y:		$inset,
-				rx:     $r,
-				width:	$s - ($inset * 2),
-				height:	$s - ($inset * 2),
-				fill: white
-			));
-		}
 	}
 }
 
-@mixin slice-guides( $slice )
+@mixin slice-guides( $slice, $s )
 {
 	@include svg_encode( 'line', (
 		x1: $slice,
 		x2: $slice,
 		y1: 0,
-		y2: 100,
+		y2: $s,
 		stroke: red,
 		stroke-width: 1
 	));
 	@include svg_encode( 'line', (
-		x1: 100 - $slice,
-		x2: 100 - $slice,
+		x1: $s - $slice,
+		x2: $s - $slice,
 		y1: 0,
-		y2: 100,
+		y2: $s,
 		stroke: red,
 		stroke-width: 1
 	));
 	@include svg_encode( 'line', (
 		x1: 0,
-		x2: 100,
+		x2: $s,
 		y1: $slice,
 		y2: $slice,
 		stroke: green,
@@ -134,9 +88,9 @@ $ib: 2px;
 	));
 	@include svg_encode( 'line', (
 		x1: 0,
-		x2: 100,
-		y1: 100 - $slice,
-		y2: 100 - $slice,
+		x2: $s,
+		y1: $s - $slice,
+		y2: $s - $slice,
 		stroke: green,
 		stroke-width: 1
 	));
@@ -161,18 +115,15 @@ $ib: 2px;
 	)) {
 		@include edge-defs( $surface-lit, $surface-mid, $surface-drk, $offset-pct-x, $offset-pct-y, $t, $r, $s );
 		@include svg_encode( 'rect', (
-			//fill:	"none",
 			fill:	"url(\'#neumorphic-bg-linear\')",
-			//mask:	"url(#neumorphic-inner-clip)",
-			//stroke-width: $t,
-			x: 		math.div( $t, 2 ),
-			y:		math.div( $t, 2 ),
+			x: 		0,
+			y:		0,
 			ry:		$r,
-			width: 	$s - $t,
-			height: $s - $t,
-			//filter:	"url(#neumorphic-edge-curve-blur)"
+			width: 	$s,
+			height: $s,
 		));
-		//@include slice-guides( $r + math.div( $t, 2 ) );
+
+		//@include slice-guides( $r + math.div( $t, 2 ), $s );
 	}
 
 	border:					solid 1px;
@@ -192,10 +143,10 @@ $ib: 2px;
 
 	$fudge: $t * 0.25;
 
-	left:	$fudge * -1px - ($ib);
-	top:	$fudge * -1px - ($ib + $ob + 1);
-	right:	$fudge * -1px - ($ib + $ob + 1);
-	bottom:	$fudge * -1px - ($ib + $ob + 1);
+	left:	0;
+	top:	0;
+	right:	0;
+	bottom:	0;
 
 	$s: 100 + (2*$r) + $t;
 	@include svg_encode((
@@ -205,30 +156,17 @@ $ib: 2px;
 		preserveAspectRatio: none
 	)) {
 		@include edge-defs( $surface-lit, $surface-mid, $surface-drk, $offset-pct-x, $offset-pct-y, $t, $r, $s );
+
 		@include svg_encode( 'rect', (
-			fill:	$surface-mid,
-			//stroke:	"url(\'#neumorphic-bg-linear\')",
-			mask:	"url(#neumorphic-inner-region)",
+			fill:	$surface-mid, //"url(\'#neumorphic-bg-linear\')",
 			x: 		0,
 			y:		0,
+			ry:		$r,
 			width: 	$s,
 			height: $s,
-			//filter:	"url(#neumorphic-edge-curve-blur)"
-		));
-		@include svg_encode( 'rect', (
-			fill:	"none",
-			stroke:	"url(\'#neumorphic-bg-linear\')",
-			mask:	"url(#neumorphic-edge-clip)",
-			stroke-width: $t,
-			x: 		$fudge,
-			y:		$fudge,
-			ry:		$r,
-			width: 	$s - ($fudge * 2),
-			height: $s - ($fudge * 2),
-			//filter:	"url(#neumorphic-edge-curve-blur)"
 		));
 
-		//@include slice-guides( $r + math.div( $t, 2 ) );
+		//@include slice-guides( $r + math.div( $t, 2 ), $s );
 	}
 
 	border:					solid 1px;
@@ -248,7 +186,7 @@ $ib: 2px;
 @mixin slab {
 	&::before {
 		content: "";
-		@include slab-outer-edge( $l, $r, 10px );
+		@include slab-outer-edge( $l, $r + 200, 10px );
 	}
 	&::after {
 		content: "";
