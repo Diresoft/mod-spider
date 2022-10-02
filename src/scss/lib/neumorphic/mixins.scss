@@ -38,13 +38,14 @@ $offset-y:			map.get( $lighting, "offset-y" );
 
 
 
-$l: 30;
-$r: 35;
+$l: 80;
+$r: 200;
+$ob: 10px;
+$ib: 2px;
 
-// Generates a border image SVG appropriate for defining a lit edge with rounded corners
-@mixin edge-defs( $lit, $mid, $drk, $off-x, $off-y, $corner-radius )
+@mixin edge-defs( $lit, $mid, $drk, $off-x, $off-y, $t, $r, $s )
 {
-	$blend: cornerRadiusToBlendPercentage( $corner-radius );
+	$blend: cornerRadiusToBlendPercentage( $r );
 	@include svg_encode( 'defs' ){
 		@include svg_encode( 'linearGradient', (
 			id: "neumorphic-bg-linear",
@@ -69,18 +70,38 @@ $r: 35;
 			@include svg_encode( 'rect', (
 				x:		0,
 				y:		0,
-				width:	100,
-				height: 100,
+				width:	$s,
+				height: $s,
 				fill: black
 			));
+			$inset: $t * 0.50;
+			@include svg_encode( 'rect', (
+				x:		$inset,
+				y:		$inset,
+				rx:     $r,
+				width:	$s - ($inset * 2),
+				height:	$s - ($inset * 2),
+				fill: white
+			));
+		}
+		@include svg_encode( 'mask', ( id: "neumorphic-inner-region" ) )
+		{
 			@include svg_encode( 'rect', (
 				x:		0,
 				y:		0,
-				rx:     $l / 2,
-				width:	100,
-				height:	100,
+				width:	$s,
+				height: $s,
+				fill: black
+			));
+			$inset: $t * 0.5;
+			@include svg_encode( 'rect', (
+				x:		$inset,
+				y:		$inset,
+				rx:     $r,
+				width:	$s - ($inset * 2),
+				height:	$s - ($inset * 2),
 				fill: white
-			))
+			));
 		}
 	}
 }
@@ -131,82 +152,93 @@ $r: 35;
 	right:	0;
 	bottom:	0;
 
-	$d: $r * 2;
-	$s: 100 + $d + $t;
-	
-	@debug $d;
-	@debug $s;
-
+	$s: 100 + (2*$r) + $t;
 	@include svg_encode((
 		width:		$s * 1px,
 		height:		$s * 1px,
 		viewBox:	"0 0 $s $s",
 		preserveAspectRatio: none
 	)) {
-		@include edge-defs( $surface-lit, $surface-mid, $surface-drk, $offset-pct-x, $offset-pct-y, $r );
+		@include edge-defs( $surface-lit, $surface-mid, $surface-drk, $offset-pct-x, $offset-pct-y, $t, $r, $s );
 		@include svg_encode( 'rect', (
-			fill:	"none",
-			stroke:	olive,//"url(\'#neumorphic-bg-linear\')",
-			//mask:	"url(#neumorphic-edge-clip)",
-			stroke-width: $t,
-			x: 		$t / 2,
-			y:		$t / 2,
+			//fill:	"none",
+			fill:	"url(\'#neumorphic-bg-linear\')",
+			//mask:	"url(#neumorphic-inner-clip)",
+			//stroke-width: $t,
+			x: 		math.div( $t, 2 ),
+			y:		math.div( $t, 2 ),
 			ry:		$r,
 			width: 	$s - $t,
 			height: $s - $t,
 			//filter:	"url(#neumorphic-edge-curve-blur)"
 		));
-		@include slice-guides( $r + $t/2 );
+		//@include slice-guides( $r + math.div( $t, 2 ) );
 	}
 
-	border:					solid 1px;//($t * 1px);
+	border:					solid 1px;
 	border-image-source:	url( $encoded-svg );
-	border-image-slice:		( $r + $t/2 ); // Strip units, but assume its same as the corner radius
-	border-image-outset:	$t / 2 + 1px;
+	border-image-slice:		( $r + math.div( $t, 2) ) fill;
+	border-image-outset:	math.div( $t, 2 ) + 1px;
 	border-image-width:		$t;
 	border-image-repeat:	stretch;
 
-	//filter: blur( 5px );
+	filter: blur( $ob );
 }
 
-@mixin slab-top-surface( $base-run, $lip-curvature, $corner-radius )
+@mixin slab-top-surface( $t, $r, $b )
 {
 	position:	absolute;
 	z-index:	-1;
 
-	left:	#{$l * 1.5}px;
-	top:	#{$l * 1.5}px;
-	right:	#{$l * 1.5}px;
-	bottom:	#{$l * 1.5}px;
+	$fudge: $t * 0.25;
 
-	$blend: cornerRadiusToBlendPercentage( $corner-radius );
+	left:	$fudge * -1px - ($ib);
+	top:	$fudge * -1px - ($ib + $ob + 1);
+	right:	$fudge * -1px - ($ib + $ob + 1);
+	bottom:	$fudge * -1px - ($ib + $ob + 1);
+
+	$s: 100 + (2*$r) + $t;
 	@include svg_encode((
-		height:		100,
-		width:		100,
-		viewBox:	"0 0 100 100",
+		width:		$s * 1px,
+		height:		$s * 1px,
+		viewBox:	"0 0 $s $s",
 		preserveAspectRatio: none
 	)) {
-		@include edge-defs( $surface-lit, $surface-mid, $surface-drk, $offset-pct-x, $offset-pct-y, $corner-radius );
-		@include svg_encode('rect', (
+		@include edge-defs( $surface-lit, $surface-mid, $surface-drk, $offset-pct-x, $offset-pct-y, $t, $r, $s );
+		@include svg_encode( 'rect', (
+			fill:	$surface-mid,
+			//stroke:	"url(\'#neumorphic-bg-linear\')",
+			mask:	"url(#neumorphic-inner-region)",
+			x: 		0,
+			y:		0,
+			width: 	$s,
+			height: $s,
+			//filter:	"url(#neumorphic-edge-curve-blur)"
+		));
+		@include svg_encode( 'rect', (
 			fill:	"none",
 			stroke:	"url(\'#neumorphic-bg-linear\')",
 			mask:	"url(#neumorphic-edge-clip)",
-			stroke-width: $l,
-			x: 		0,
-			y:		0,
-			rx:		$l / 2,
-			width: 	100,
-			height: 100,
-			//filter:	"url(#edge-curvature)"
+			stroke-width: $t,
+			x: 		$fudge,
+			y:		$fudge,
+			ry:		$r,
+			width: 	$s - ($fudge * 2),
+			height: $s - ($fudge * 2),
+			//filter:	"url(#neumorphic-edge-curve-blur)"
 		));
+
+		//@include slice-guides( $r + math.div( $t, 2 ) );
 	}
-	border:					solid;
+
+	border:					solid 1px;
 	border-image-source:	url( $encoded-svg );
-	border-image-slice:		$l fill; // Strip units, but assume its same as the corner radius
-	border-image-width:		$l;
+	border-image-slice:		( $r + math.div($t, 2) ) fill;
+	border-image-outset:	0;
+	border-image-width:		$t;
 	border-image-repeat:	stretch;
 
-	//filter: blur( 2px );
+	filter: blur( $ib );
 }
 
 @mixin slab-lip {
@@ -216,11 +248,11 @@ $r: 35;
 @mixin slab {
 	&::before {
 		content: "";
-		@include slab-outer-edge( $l, $r, 10px);
+		@include slab-outer-edge( $l, $r, 10px );
 	}
-	// &::after {
-	// 	content: "";
-	// 	@include slab-top-surface( $edge-base-length + $slab-corner-radius / 2, $lip-curve, $slab-corner-radius);
-	// }
+	&::after {
+		content: "";
+		@include slab-top-surface( $l, $r, 10px );
+	}
 
 }

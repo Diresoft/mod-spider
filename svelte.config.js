@@ -8,7 +8,8 @@ export default {
   preprocess: sveltePreprocess({
 	sass: {
 		sync: true,
-		implementation: sass
+		implementation: sass,
+		quietDeps: true
 	}
   }),
 
