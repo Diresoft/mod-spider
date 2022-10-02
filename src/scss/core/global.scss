@@ -1,0 +1,57 @@
+// --------
+// | Uses |
+// --------
+@use '/src/scss/lib/neumorphic.scss';
+
+@use '../theme.scss' as *;
+
+
+body {
+	
+	font-family: sans-serif;
+
+	color: white;
+	background-color: $window-bg;
+}
+
+@keyframes wiggle {
+	from {
+		width:	40vh;
+		height:	40vh;
+	}
+
+	25% {
+		width:	60vh;
+		height:	40vh;
+	}
+
+	50% {
+		width:	60vh;
+		height:	60vh;
+	}
+
+	75% {
+		width:	40vh;
+		height:	60vh;
+	}
+	
+	to {
+		width:	40vh;
+		height:	40vh;
+	}
+}
+modal {
+	@include neumorphic.slab();
+
+	position: absolute;
+
+	left:	50vw;
+	top:	50vh;
+
+	height: 40vh;
+	width:  40vh;
+
+	transform: translate( -50%, -50% );
+
+	animation: wiggle 10s ease-in-out infinite;
+}

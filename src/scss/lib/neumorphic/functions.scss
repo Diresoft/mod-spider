@@ -1,0 +1,57 @@
+// Sass Modules
+@use 'sass:color';
+@use 'sass:math';
+@use 'sass:map';
+
+@function units( $val ) {
+	@return ($val * 0 + 1)
+}
+
+@function cornerRadiusToBlendPercentage( $radius ) {
+	// This formula works for 'em' ratios, but untested for others
+	@return math.div( $radius, ( $radius * 0 + 1 ) ) * 10.5%;
+}
+
+@function computeLighting( $geo-info, $light-info, $surface-info )
+{
+	/**
+	* | Symbol | Description 
+	* | ------ | -----------
+	* | H      | "Height" of the slab in the 'Z' axis
+	* | Theta  | "Yaw" of the light. A rotation around the 'Z' axis
+	* | Phi    | "Pitch" of the light. A rotation on an axis perpendicular to the x/y plane
+	* | L      | "Length" of the shadow cast by the slab
+	* | x      | X component of the shadow's 'L' axis
+	* | y      | Y component of the shadow's 'L' axis
+	* | x_pct  | (0, 1) normalized version of 'x'
+	* | y_pct  | (0, 1) normalized version of 'y'
+	*
+	* L = H * tan( Phi )
+	* x_pct = sin( Theta )
+	* y_pct = cos( Theta )
+    * x = L * x_pct
+	* y = L * y_pct
+	*/
+
+	$L: map.get( $geo-info, 'height' ) * math.tan( map.get( $light-info, 'pitch' ) );
+	$x_pct: math.sin( map.get( $light-info, 'yaw' ) );
+	$y_pct: math.cos( map.get( $light-info, 'yaw' ) );
+
+	@return (
+		"shadow-length": $L,
+		"offset-pct-x": $x_pct,
+		"offset-pct-y": $y_pct,
+		"offset-x": $L * $x_pct,
+		"offset-y": $L * $y_pct,
+		"surface": (
+			"lit": color.scale( map.get( $surface-info, "diffuse" ), $lightness: map.get( $light-info, "strength" )		 ),
+			"mid": map.get( $surface-info, "diffuse" ),
+			"drk": color.scale( map.get( $surface-info, "diffuse" ), $lightness: map.get( $light-info, "strength" ) * -1 ),
+			"sha": color.scale( map.get( $surface-info, "diffuse" ), $lightness: map.get( $light-info, "strength" ) * -2, $alpha: -20% )
+		)
+	);
+}
+
+@function slopeToDistance( $height, $theta ) {
+	@return ( $height * math.tan($theta) );
+}

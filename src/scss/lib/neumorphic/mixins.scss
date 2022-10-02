@@ -1,0 +1,226 @@
+// SASS Libraries
+@use 'sass:color';
+@use 'sass:math';
+@use 'sass:map';
+
+
+// Module Libraries
+@use 'functions.scss' as *;
+
+// Project Libraries
+
+// Theme/Vars
+@use 'vars.scss' as *;
+
+// Third Party - Import
+@import '/node_modules/sassdash/index';
+@import '/node_modules/sass-svg/index';
+@import '/src/scss/core/hacks.scss';
+
+// ---------------
+// Cache in easier to use variables
+$base-curve:		map.get( $neumorphic-slab-description, "base-curve");
+$slab-height:		map.get( $neumorphic-slab-description, "height");
+$lip-curve:			map.get( $neumorphic-slab-description, "lip-curve");
+
+$edge-base-length:	slopeToDistance( $slab-height, $slab-edge-slope );
+$lighting:			computeLighting( $neumorphic-slab-description, $neumorphic-light-description, map.get( $neumorphic-slab-description, "surface" ) );
+
+$surface-lit:		map.get( map.get( $lighting, "surface" ), "lit" );
+$surface-mid:		map.get( map.get( $lighting, "surface" ), "mid" );
+$surface-drk:		map.get( map.get( $lighting, "surface" ), "drk" );
+$surface-sha:		map.get( map.get( $lighting, "surface" ), "sha" );
+
+$offset-pct-x:		map.get( $lighting, "offset-pct-x" );
+$offset-pct-y:		map.get( $lighting, "offset-pct-y" );
+$offset-x:			map.get( $lighting, "offset-x" );
+$offset-y:			map.get( $lighting, "offset-y" );
+
+
+
+$l: 30;
+$r: 35;
+
+// Generates a border image SVG appropriate for defining a lit edge with rounded corners
+@mixin edge-defs( $lit, $mid, $drk, $off-x, $off-y, $corner-radius )
+{
+	$blend: cornerRadiusToBlendPercentage( $corner-radius );
+	@include svg_encode( 'defs' ){
+		@include svg_encode( 'linearGradient', (
+			id: "neumorphic-bg-linear",
+			x1: 50% - ($off-x * 50),
+			y1: 50% - ($off-y * 50),
+			x2: 50% + ($off-x * 50),
+			y2: 50% + ($off-y * 50)
+		)) {
+			@include svg_encode( 'stop', ( offset: 50% - $blend, stop-color: $lit ) );
+			@include svg_encode( 'stop', ( offset: 50%,			 stop-color: $mid ) );
+			@include svg_encode( 'stop', ( offset: 50% + $blend, stop-color: $drk ) );
+		}
+		@include svg_encode( 'filter', ( id: "neumorphic-edge-curve-blur" ) )
+		{
+			@include svg_encode( 'feGaussianBlur', (
+				"in": "SourceGraphic",
+				"stdDeviation": "2"
+			));
+		}
+		@include svg_encode( 'mask', ( id: "neumorphic-edge-clip" ) )
+		{
+			@include svg_encode( 'rect', (
+				x:		0,
+				y:		0,
+				width:	100,
+				height: 100,
+				fill: black
+			));
+			@include svg_encode( 'rect', (
+				x:		0,
+				y:		0,
+				rx:     $l / 2,
+				width:	100,
+				height:	100,
+				fill: white
+			))
+		}
+	}
+}
+
+@mixin slice-guides( $slice )
+{
+	@include svg_encode( 'line', (
+		x1: $slice,
+		x2: $slice,
+		y1: 0,
+		y2: 100,
+		stroke: red,
+		stroke-width: 1
+	));
+	@include svg_encode( 'line', (
+		x1: 100 - $slice,
+		x2: 100 - $slice,
+		y1: 0,
+		y2: 100,
+		stroke: red,
+		stroke-width: 1
+	));
+	@include svg_encode( 'line', (
+		x1: 0,
+		x2: 100,
+		y1: $slice,
+		y2: $slice,
+		stroke: green,
+		stroke-width: 1
+	));
+	@include svg_encode( 'line', (
+		x1: 0,
+		x2: 100,
+		y1: 100 - $slice,
+		y2: 100 - $slice,
+		stroke: green,
+		stroke-width: 1
+	));
+}
+
+@mixin slab-outer-edge( $t, $r, $b )
+{
+	position:	absolute;
+	z-index:	-1;
+
+	left:	0;
+	top:	0;
+	right:	0;
+	bottom:	0;
+
+	$d: $r * 2;
+	$s: 100 + $d + $t;
+	
+	@debug $d;
+	@debug $s;
+
+	@include svg_encode((
+		width:		$s * 1px,
+		height:		$s * 1px,
+		viewBox:	"0 0 $s $s",
+		preserveAspectRatio: none
+	)) {
+		@include edge-defs( $surface-lit, $surface-mid, $surface-drk, $offset-pct-x, $offset-pct-y, $r );
+		@include svg_encode( 'rect', (
+			fill:	"none",
+			stroke:	olive,//"url(\'#neumorphic-bg-linear\')",
+			//mask:	"url(#neumorphic-edge-clip)",
+			stroke-width: $t,
+			x: 		$t / 2,
+			y:		$t / 2,
+			ry:		$r,
+			width: 	$s - $t,
+			height: $s - $t,
+			//filter:	"url(#neumorphic-edge-curve-blur)"
+		));
+		@include slice-guides( $r + $t/2 );
+	}
+
+	border:					solid 1px;//($t * 1px);
+	border-image-source:	url( $encoded-svg );
+	border-image-slice:		( $r + $t/2 ); // Strip units, but assume its same as the corner radius
+	border-image-outset:	$t / 2 + 1px;
+	border-image-width:		$t;
+	border-image-repeat:	stretch;
+
+	//filter: blur( 5px );
+}
+
+@mixin slab-top-surface( $base-run, $lip-curvature, $corner-radius )
+{
+	position:	absolute;
+	z-index:	-1;
+
+	left:	#{$l * 1.5}px;
+	top:	#{$l * 1.5}px;
+	right:	#{$l * 1.5}px;
+	bottom:	#{$l * 1.5}px;
+
+	$blend: cornerRadiusToBlendPercentage( $corner-radius );
+	@include svg_encode((
+		height:		100,
+		width:		100,
+		viewBox:	"0 0 100 100",
+		preserveAspectRatio: none
+	)) {
+		@include edge-defs( $surface-lit, $surface-mid, $surface-drk, $offset-pct-x, $offset-pct-y, $corner-radius );
+		@include svg_encode('rect', (
+			fill:	"none",
+			stroke:	"url(\'#neumorphic-bg-linear\')",
+			mask:	"url(#neumorphic-edge-clip)",
+			stroke-width: $l,
+			x: 		0,
+			y:		0,
+			rx:		$l / 2,
+			width: 	100,
+			height: 100,
+			//filter:	"url(#edge-curvature)"
+		));
+	}
+	border:					solid;
+	border-image-source:	url( $encoded-svg );
+	border-image-slice:		$l fill; // Strip units, but assume its same as the corner radius
+	border-image-width:		$l;
+	border-image-repeat:	stretch;
+
+	//filter: blur( 2px );
+}
+
+@mixin slab-lip {
+	box-shadow: inset 5px 5px 0px 5px black;
+}
+
+@mixin slab {
+	&::before {
+		content: "";
+		@include slab-outer-edge( $l, $r, 10px);
+	}
+	// &::after {
+	// 	content: "";
+	// 	@include slab-top-surface( $edge-base-length + $slab-corner-radius / 2, $lip-curve, $slab-corner-radius);
+	// }
+
+}

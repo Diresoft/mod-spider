@@ -1,0 +1,21 @@
+@use '/src/scss/theme/default.scss' as *;
+
+$bg: $window-bg;
+
+$slab-edge-slope:	5deg;
+$slab-corner-radius: 25px;
+
+$neumorphic-slab-description: (
+	"height":     55px,
+	"lip-curve":   2px,
+	"base-curve":  10px,
+	"surface": (
+		"diffuse": $window-bg
+	)
+);
+
+$neumorphic-light-description: (
+	"strength": 20%,
+	"pitch":	15deg,
+	"yaw":		45deg
+)
