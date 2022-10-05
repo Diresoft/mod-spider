@@ -3,12 +3,19 @@
 @use 'sass:math';
 @use 'sass:map';
 
-@function units( $val ) {
-	@return ($val * 0 + 1)
+@use '@sass-fairy/url';
+
+@function units( $val )
+{
+	@return ($val * 0 + 1);
+}
+
+@function unitless( $val ) {
+	@return math.div( $val, units( $val ) );
 }
 
 @function cornerRadiusToBlendPercentage( $radius ) {
-	// This formula works for 'em' ratios, but untested for others
+	// This formula works for 'px' ratios, but untested for others
 	@return math.div( $radius, ( $radius * 0 + 1 ) ) * 10.5%;
 }
 
@@ -47,11 +54,27 @@
 			"lit": color.scale( map.get( $surface-info, "diffuse" ), $lightness: map.get( $light-info, "strength" )		 ),
 			"mid": map.get( $surface-info, "diffuse" ),
 			"drk": color.scale( map.get( $surface-info, "diffuse" ), $lightness: map.get( $light-info, "strength" ) * -1 ),
-			"sha": color.scale( map.get( $surface-info, "diffuse" ), $lightness: map.get( $light-info, "strength" ) * -2, $alpha: -20% )
+			"sha": color.scale( map.get( $surface-info, "diffuse" ), $lightness: map.get( $light-info, "strength" ) * -2, $alpha: -20% ),
 		)
 	);
 }
 
 @function slopeToDistance( $height, $theta ) {
 	@return ( $height * math.tan($theta) );
+}
+
+
+@function makeBorderSVGUrl( $lit, $mid, $drk, $off-x, $off-y, $r, $s ) {
+	$blend: cornerRadiusToBlendPercentage( $r );
+	@return url.svg(
+'<svg width="#{$s * 1px}" height="#{$s * 1px}" viewBox="0 0 #{$s} #{$s}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">'
+	'<defs>'
+		'<linearGradient id="neumorphic-bg-linear" x1="#{ 50% - ($off-x * 50) }" y1="#{ 50% - ($off-y * 50) }" x2="#{ 50% + ($off-x * 50) }" y2="#{ 50% + ($off-y * 50) }">'
+			'<stop offset="#{ 50% - $blend }" stop-color="#{$lit}" />'
+			'<stop offset="#{ 50%          }" stop-color="#{$mid}" />'
+			'<stop offset="#{ 50% + $blend }" stop-color="#{$drk}" />'
+		'</linearGradient>'
+	'</defs>'
+	'<rect fill="url(\'#neumorphic-bg-linear\')" x="0" y="0" ry="#{$s}" width="#{$s}" height="#{$s}" />'
+'</svg>' );
 }

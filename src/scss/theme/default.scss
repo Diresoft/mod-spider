@@ -1,3 +1,11 @@
-@use '/src/scss/core/colours.scss';
+@use '@scss/core/colours.scss';
+
+@use '@scss/core/fonts.scss';
+@forward '@scss/core/fonts.scss';
 
 $window-bg: colours.$cool-black;
+
+$col-frame: rgb(43, 44, 49);
+
+$col-primary: colours.$neon-green;
+$col-secondary: colours.$neon-orange;

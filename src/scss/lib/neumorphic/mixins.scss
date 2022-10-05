@@ -13,21 +13,21 @@
 @use 'vars.scss' as *;
 
 // Third Party - Import
-@import '/node_modules/sassdash/index';
-@import '/node_modules/sass-svg/index';
-@import '/src/scss/core/hacks.scss';
 
 // ---------------
 // Cache in easier to use variables
-$base-curve:		map.get( $neumorphic-slab-description, "base-curve");
-$slab-height:		map.get( $neumorphic-slab-description, "height");
-$lip-curve:			map.get( $neumorphic-slab-description, "lip-curve");
+$slab-height:		map.get( $slab-description, "height");
+$corner-radius:		map.get( $slab-description, "radius");
+$edge-slope:		map.get( $slab-description, "edge-slope");
+$base-curvature:	map.get( $slab-description, "base-curvature");
+$lip-curvature:		map.get( $slab-description, "lip-curvature");
 
-$edge-base-length:	slopeToDistance( $slab-height, $slab-edge-slope );
-$lighting:			computeLighting( $neumorphic-slab-description, $neumorphic-light-description, map.get( $neumorphic-slab-description, "surface" ) );
+$edge-base-length:	slopeToDistance( $slab-height, $edge-slope );
+$lighting:			computeLighting( $slab-description, $light-description, map.get( $slab-description, "surface" ) );
 
 $surface-lit:		map.get( map.get( $lighting, "surface" ), "lit" );
 $surface-mid:		map.get( map.get( $lighting, "surface" ), "mid" );
+$surface-bg:		map.get( map.get( $lighting, "surface" ), "bg"  );
 $surface-drk:		map.get( map.get( $lighting, "surface" ), "drk" );
 $surface-sha:		map.get( map.get( $lighting, "surface" ), "sha" );
 
@@ -36,68 +36,15 @@ $offset-pct-y:		map.get( $lighting, "offset-pct-y" );
 $offset-x:			map.get( $lighting, "offset-x" );
 $offset-y:			map.get( $lighting, "offset-y" );
 
-
-$l: 200;
-$r: 30;
 $ob: 8px;
-$ib: 1px;
+$ib: 2px;
 
-@mixin edge-defs( $lit, $mid, $drk, $off-x, $off-y, $t, $r, $s )
+@mixin slab-outer-edge( $edge-run, $corner-radius, $curvature )
 {
-	$blend: cornerRadiusToBlendPercentage( $r );
-	@include svg_encode( 'defs' ){
-		@include svg_encode( 'linearGradient', (
-			id: "neumorphic-bg-linear",
-			x1: 50% - ($off-x * 50),
-			y1: 50% - ($off-y * 50),
-			x2: 50% + ($off-x * 50),
-			y2: 50% + ($off-y * 50)
-		)) {
-			@include svg_encode( 'stop', ( offset: 50% - $blend, stop-color: $lit ) );
-			@include svg_encode( 'stop', ( offset: 50%,			 stop-color: $mid ) );
-			@include svg_encode( 'stop', ( offset: 50% + $blend, stop-color: $drk ) );
-		}
-	}
-}
+	$t: unitless( $edge-run );
+	$r: unitless( $corner-radius );
+	$s: 100 + (2*$r) + $t;
 
-@mixin slice-guides( $slice, $s )
-{
-	@include svg_encode( 'line', (
-		x1: $slice,
-		x2: $slice,
-		y1: 0,
-		y2: $s,
-		stroke: red,
-		stroke-width: 1
-	));
-	@include svg_encode( 'line', (
-		x1: $s - $slice,
-		x2: $s - $slice,
-		y1: 0,
-		y2: $s,
-		stroke: red,
-		stroke-width: 1
-	));
-	@include svg_encode( 'line', (
-		x1: 0,
-		x2: $s,
-		y1: $slice,
-		y2: $slice,
-		stroke: green,
-		stroke-width: 1
-	));
-	@include svg_encode( 'line', (
-		x1: 0,
-		x2: $s,
-		y1: $s - $slice,
-		y2: $s - $slice,
-		stroke: green,
-		stroke-width: 1
-	));
-}
-
-@mixin slab-outer-edge( $t, $r, $b )
-{
 	position:	absolute;
 	z-index:	-1;
 
@@ -106,38 +53,22 @@ $ib: 1px;
 	right:	0;
 	bottom:	0;
 
-	$s: 100 + (2*$r) + $t;
-	@include svg_encode((
-		width:		$s * 1px,
-		height:		$s * 1px,
-		viewBox:	"0 0 $s $s",
-		preserveAspectRatio: none
-	)) {
-		@include edge-defs( $surface-lit, $surface-mid, $surface-drk, $offset-pct-x, $offset-pct-y, $t, $r, $s );
-		@include svg_encode( 'rect', (
-			fill:	"url(\'#neumorphic-bg-linear\')",
-			x: 		0,
-			y:		0,
-			ry:		$r,
-			width: 	$s,
-			height: $s,
-		));
-
-		//@include slice-guides( $r + math.div( $t, 2 ), $s );
-	}
-
 	border:					solid 1px;
-	border-image-source:	url( $encoded-svg );
+	border-image-source:	makeBorderSVGUrl( $surface-lit, $surface-mid, $surface-drk, $offset-pct-x, $offset-pct-y, $r, $s );
 	border-image-slice:		( $r + math.div( $t, 2) ) fill;
 	border-image-outset:	math.div( $t, 2 ) + 1px;
 	border-image-width:		$t;
 	border-image-repeat:	stretch;
 
-	filter: blur( $ob );
+	filter: blur( $curvature );
 }
 
-@mixin slab-top-surface( $t, $r, $b )
+@mixin slab-top-surface( $edge-run, $corner-radius, $curvature )
 {
+	$t: unitless( $edge-run );
+	$r: unitless( $corner-radius );
+	$s: 100 + (2*$r) + $t;
+
 	position:	absolute;
 	z-index:	-1;
 
@@ -148,49 +79,19 @@ $ib: 1px;
 	right:	0;
 	bottom:	0;
 
-	$s: 100 + (2*$r) + $t;
-	@include svg_encode((
-		width:		$s * 1px,
-		height:		$s * 1px,
-		viewBox:	"0 0 $s $s",
-		preserveAspectRatio: none
-	)) {
-		@include edge-defs( $surface-lit, $surface-mid, $surface-drk, $offset-pct-x, $offset-pct-y, $t, $r, $s );
-
-		@include svg_encode( 'rect', (
-			fill:	$surface-mid, //"url(\'#neumorphic-bg-linear\')",
-			x: 		0,
-			y:		0,
-			ry:		$r,
-			width: 	$s,
-			height: $s,
-		));
-
-		//@include slice-guides( $r + math.div( $t, 2 ), $s );
-	}
-
-	border:					solid 1px;
-	border-image-source:	url( $encoded-svg );
-	border-image-slice:		( $r + math.div($t, 2) ) fill;
-	border-image-outset:	0;
-	border-image-width:		$t;
-	border-image-repeat:	stretch;
-
-	filter: blur( $ib );
-}
-
-@mixin slab-lip {
-	box-shadow: inset 5px 5px 0px 5px black;
+	background-color:	$surface-mid;
+	border-radius:		$corner-radius;
+	filter:				blur( $curvature );
 }
 
 @mixin slab {
 	&::before {
 		content: "";
-		@include slab-outer-edge( $l, $r + 200, 10px );
+		$radius-offset: $edge-base-length;
+		@include slab-outer-edge( $edge-base-length, $corner-radius + $radius-offset, $base-curvature );
 	}
 	&::after {
 		content: "";
-		@include slab-top-surface( $l, $r, 10px );
+		@include slab-top-surface( $edge-base-length, $corner-radius, $lip-curvature );
 	}
-
 }

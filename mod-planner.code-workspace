@@ -6,9 +6,13 @@
 	],
 	"settings": {
 		"cSpell.words": [
+			"sveltejs",
 			"neumorphic",
 			"neumorphism",
 			"sassdash"
 		]
+	},
+	"launch": {
+		"version": "0.2.0"
 	}
 }
