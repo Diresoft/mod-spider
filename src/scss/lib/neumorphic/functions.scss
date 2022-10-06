@@ -15,11 +15,10 @@
 }
 
 @function cornerRadiusToBlendPercentage( $radius ) {
-	// This formula works for 'px' ratios, but untested for others
-	@return math.div( $radius, ( $radius * 0 + 1 ) ) * 10.5%;
+	@return math.div( $radius, ( $radius * 0 + 1 ) ) * 1;
 }
 
-@function computeLighting( $geo-info, $light-info, $surface-info )
+@function computeLighting( $height, $light-info, $surface-colour )
 {
 	/**
 	* | Symbol | Description 
@@ -40,7 +39,7 @@
 	* y = L * y_pct
 	*/
 
-	$L: map.get( $geo-info, 'height' ) * math.tan( map.get( $light-info, 'pitch' ) );
+	$L: $height * math.tan( map.get( $light-info, 'pitch' ) );
 	$x_pct: math.sin( map.get( $light-info, 'yaw' ) );
 	$y_pct: math.cos( map.get( $light-info, 'yaw' ) );
 
@@ -51,10 +50,10 @@
 		"offset-x": $L * $x_pct,
 		"offset-y": $L * $y_pct,
 		"surface": (
-			"lit": color.scale( map.get( $surface-info, "diffuse" ), $lightness: map.get( $light-info, "strength" )		 ),
-			"mid": map.get( $surface-info, "diffuse" ),
-			"drk": color.scale( map.get( $surface-info, "diffuse" ), $lightness: map.get( $light-info, "strength" ) * -1 ),
-			"sha": color.scale( map.get( $surface-info, "diffuse" ), $lightness: map.get( $light-info, "strength" ) * -2, $alpha: -20% ),
+			"lit": color.scale( $surface-colour, $lightness: map.get( $light-info, "strength" )		 ),
+			"mid": $surface-colour,
+			"drk": color.scale( $surface-colour, $lightness: map.get( $light-info, "strength" ) * -1 ),
+			"sha": color.scale( $surface-colour, $lightness: map.get( $light-info, "strength" ) * -2, $alpha: -20% ),
 		)
 	);
 }

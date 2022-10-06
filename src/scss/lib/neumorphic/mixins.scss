@@ -3,7 +3,6 @@
 @use 'sass:math';
 @use 'sass:map';
 
-
 // Module Libraries
 @use 'functions.scss' as *;
 
@@ -11,40 +10,11 @@
 
 // Theme/Vars
 @use 'vars.scss' as *;
+@use '../../theme.scss' as *;
 
-// Third Party - Import
 
-// ---------------
-// Cache in easier to use variables
-$slab-height:		map.get( $slab-description, "height");
-$corner-radius:		map.get( $slab-description, "radius");
-$edge-slope:		map.get( $slab-description, "edge-slope");
-$base-curvature:	map.get( $slab-description, "base-curvature");
-$lip-curvature:		map.get( $slab-description, "lip-curvature");
-
-$edge-base-length:	slopeToDistance( $slab-height, $edge-slope );
-$lighting:			computeLighting( $slab-description, $light-description, map.get( $slab-description, "surface" ) );
-
-$surface-lit:		map.get( map.get( $lighting, "surface" ), "lit" );
-$surface-mid:		map.get( map.get( $lighting, "surface" ), "mid" );
-$surface-bg:		map.get( map.get( $lighting, "surface" ), "bg"  );
-$surface-drk:		map.get( map.get( $lighting, "surface" ), "drk" );
-$surface-sha:		map.get( map.get( $lighting, "surface" ), "sha" );
-
-$offset-pct-x:		map.get( $lighting, "offset-pct-x" );
-$offset-pct-y:		map.get( $lighting, "offset-pct-y" );
-$offset-x:			map.get( $lighting, "offset-x" );
-$offset-y:			map.get( $lighting, "offset-y" );
-
-$ob: 8px;
-$ib: 2px;
-
-@mixin slab-outer-edge( $edge-run, $corner-radius, $curvature )
+@mixin common 
 {
-	$t: unitless( $edge-run );
-	$r: unitless( $corner-radius );
-	$s: 100 + (2*$r) + $t;
-
 	position:	absolute;
 	z-index:	-1;
 
@@ -52,46 +22,82 @@ $ib: 2px;
 	top:	0;
 	right:	0;
 	bottom:	0;
-
-	border:					solid 1px;
-	border-image-source:	makeBorderSVGUrl( $surface-lit, $surface-mid, $surface-drk, $offset-pct-x, $offset-pct-y, $r, $s );
-	border-image-slice:		( $r + math.div( $t, 2) ) fill;
-	border-image-outset:	math.div( $t, 2 ) + 1px;
-	border-image-width:		$t;
-	border-image-repeat:	stretch;
-
-	filter: blur( $curvature );
 }
 
-@mixin slab-top-surface( $edge-run, $corner-radius, $curvature )
+@mixin slab-height( $height: $height, $slope: $slope )
 {
-	$t: unitless( $edge-run );
-	$r: unitless( $corner-radius );
-	$s: 100 + (2*$r) + $t;
+	$edge-run: slopeToDistance( $height, $slope );
 
-	position:	absolute;
-	z-index:	-1;
-
-	$fudge: $t * 0.25;
-
-	left:	0;
-	top:	0;
-	right:	0;
-	bottom:	0;
-
-	background-color:	$surface-mid;
-	border-radius:		$corner-radius;
-	filter:				blur( $curvature );
+	&::before {
+		left:	$edge-run * -1;
+		top:	$edge-run * -1;
+		right:	$edge-run * -1;
+		bottom:	$edge-run * -1;
+		
+	}
 }
 
-@mixin slab {
+@mixin slab-transition( $duration: 250ms, $easing: ease-in-out, $properties: ( left, top, right, bottom, border-radius, transform ) ) {
+	&::after {
+		//transition: $transition;
+		transition-duration: $duration;
+		transition-property: $properties;
+		transition-timing-function: $easing;
+	}
+}
+
+@mixin slab( $height: $height, $corner-radius: $corner-radius, $slope: $slope, $base-curve: $base-curve, $lip-curve: $lip-curve, $colour: $surface-colour, $transition: 500ms ease-in-out ) {
+	$lighting:		computeLighting( $height, $neumorphic-light, $colour );
+
+	$surface-lit:		map.get( map.get( $lighting, "surface" ), "lit" );
+	$surface-mid:		map.get( map.get( $lighting, "surface" ), "mid" );
+	$surface-bg:		map.get( map.get( $lighting, "surface" ), "bg"  );
+	$surface-drk:		map.get( map.get( $lighting, "surface" ), "drk" );
+	$surface-sha:		map.get( map.get( $lighting, "surface" ), "sha" );
+	
+	$offset-pct-x:		map.get( $lighting, "offset-pct-x" );
+	$offset-pct-y:		map.get( $lighting, "offset-pct-y" );
+	$offset-x:			map.get( $lighting, "offset-x" );
+	$offset-y:			map.get( $lighting, "offset-y" );
+
+	$blend: cornerRadiusToBlendPercentage( $corner-radius );
+
 	&::before {
 		content: "";
-		$radius-offset: $edge-base-length;
-		@include slab-outer-edge( $edge-base-length, $corner-radius + $radius-offset, $base-curvature );
+		$radius-offset:	$height * 0.35;
+		$r:				$corner-radius + $radius-offset;
+
+		position:	absolute;
+		z-index:	-1;
+
+
+		border-radius:		$r;
+		background-image:	linear-gradient(
+			map.get( $neumorphic-light, "yaw" ) * -1,
+			  $surface-drk   0% ( 50% - $blend )
+			, $surface-mid
+			, $surface-lit 100% ( 50% + $blend )
+		);
+		background-size: 100% 100%;
+		background-position: 0% 0%;
+
+		filter: blur( $base-curve );
+
+		//@include slab-transition();
 	}
+	@include slab-height( $height );
+
+
 	&::after {
 		content: "";
-		@include slab-top-surface( $edge-base-length, $corner-radius, $lip-curvature );
+		
+		@include common();
+
+		background-color:	$surface-mid;
+		border-radius:		$corner-radius;
+
+		filter:				blur( $lip-curve );
 	}
+	position:	relative;
+	z-index:	0;
 }

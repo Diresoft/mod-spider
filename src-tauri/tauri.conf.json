@@ -7,7 +7,7 @@
     "distDir": "../build"
   },
   "package": {
-    "productName": "com.diresoft.modding-master",
+    "productName": "modding-master",
     "version": "0.1.0"
   },
   "tauri": {

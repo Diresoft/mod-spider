@@ -1,20 +1,18 @@
 @use '@scss/theme/default.scss' as *;
 
-$bg: $window-bg;
 
-$slab-description: (
-	"radius":			15px,
-	"height":			45px,
-	"edge-slope":		25deg,
-	"base-curvature":	6px,
-	"lip-curvature":	2px,
-	"surface": (
-		"diffuse": $window-bg
-	)
-);
+$height:		25px;
+$corner-radius:	15px;
+$slope:			25deg;
+$base-curve:	8px;
+$lip-curve:		2px;
 
-$light-description: (
-	"strength": 15%,
+$surface-colour: $window-bg;
+
+$rotate-reaction-degrees: 15deg;
+
+$neumorphic-light: (
+	"strength": 35%,
 	"pitch":	15deg,
 	"yaw":		25deg
 )
