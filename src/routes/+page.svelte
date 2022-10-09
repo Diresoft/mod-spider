@@ -1,60 +1,37 @@
 <script lang="ts">
-	import IconButton from "$lib/compontents/IconButton.svelte";
+	import { app } from '$lib/app/application_context';
+	import Symbol from '$lib/compontents/Symbol.svelte';
+	import NeuButton from '$lib/compontents/form/NeuButton.svelte';
+	import NeuInput from '$lib/compontents/form/NeuInput.svelte';
+	import ModSearchComponent from '$lib/compontents/ModSearchComponent.svelte';
 
+	function addMod()
+	{
+		console.log("Adding mod")
+	}
+
+	let mod_id : any;
 </script>
 
-<container>
+<mod-search-panel>
+	<NeuInput bind:value={mod_id} type="text" placeholder="Mod Id" />
+	<NeuButton on:click={addMod} >
+		<Symbol>add</Symbol>
+	</NeuButton>
+	<ModSearchComponent search={mod_id} />
 
-	<menu>
-		<header>
-			<title>Plan</title>
-			<nav>
-
-			</nav>
-		</header>
-		<content>
-
-		</content>
-	</menu>
-	<mod-list>
-		<nav>
-			<IconButton>add</IconButton>
-		</nav>
-
-		Hello World
-	</mod-list>
-	<hierarchy>
-		hierarchy
-	</hierarchy>
-</container>
-
+</mod-search-panel>
 
 <style lang='scss'>
 @use '@scss/lib/neumorphic';
 @use '@scss/theme' as theme;
 
-container {
-	position: relative;
-	
-	display: flex;
-	flex-direction: row;
+mod-search-panel {
+	display: block;
+	@include neumorphic.slab();
 
-	height: 100vh;
-	width: 100vw;
-
-	overflow: hidden;
-}
-
-mod-list {
-	position: relative;
-
-	// @include neumorphic.slab( );
-	// @include neumorphic.slab-transition( $duration: 550ms, $easing: ease-out );
-
-	width: 25vw;
-
-	padding: 1em;
-	margin: 5em;
+	margin: 2em;
+	padding: 2em;
 }
 
 </style>

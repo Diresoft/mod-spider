@@ -15,7 +15,7 @@
 }
 
 @function cornerRadiusToBlendPercentage( $radius ) {
-	@return math.div( $radius, ( $radius * 0 + 1 ) ) * 1;
+	@return math.div( $radius, ( $radius * 0 + 1 ) ) * 5;
 }
 
 @function computeLighting( $height, $light-info, $surface-colour )
@@ -52,8 +52,8 @@
 		"surface": (
 			"lit": color.scale( $surface-colour, $lightness: map.get( $light-info, "strength" )		 ),
 			"mid": $surface-colour,
-			"drk": color.scale( $surface-colour, $lightness: map.get( $light-info, "strength" ) * -1 ),
-			"sha": color.scale( $surface-colour, $lightness: map.get( $light-info, "strength" ) * -2, $alpha: -20% ),
+			"drk": color.scale( $surface-colour, $lightness: map.get( $light-info, "strength" ) * -3 ),
+			"sha": color.scale( $surface-colour, $lightness: map.get( $light-info, "strength" ) * -3, $alpha: -20% ),
 		)
 	);
 }

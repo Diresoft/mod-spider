@@ -2,6 +2,7 @@
 @use 'sass:color';
 @use 'sass:math';
 @use 'sass:map';
+@use 'sass:list';
 
 // Module Libraries
 @use 'functions.scss' as *;
@@ -13,91 +14,121 @@
 @use '../../theme.scss' as *;
 
 
-@mixin common 
+@mixin slab-invert()
 {
-	position:	absolute;
-	z-index:	-1;
-
-	left:	0;
-	top:	0;
-	right:	0;
-	bottom:	0;
+	&::before {
+		transform: scale3d( -1, -1, -1 );
+	}
 }
 
 @mixin slab-height( $height: $height, $slope: $slope )
 {
-	$edge-run: slopeToDistance( $height, $slope );
+	$safe-height: math.abs( $height );
+	@if $height < 0 {
+		@include slab-invert();
+	}
 
+	$edge-run: slopeToDistance( $safe-height, $slope );
 	&::before {
 		left:	$edge-run * -1;
 		top:	$edge-run * -1;
 		right:	$edge-run * -1;
 		bottom:	$edge-run * -1;
-		
 	}
 }
 
-@mixin slab-transition( $duration: 250ms, $easing: ease-in-out, $properties: ( left, top, right, bottom, border-radius, transform ) ) {
-	&::after {
-		//transition: $transition;
-		transition-duration: $duration;
-		transition-property: $properties;
-		transition-timing-function: $easing;
+@mixin slab-transition(
+	  $duration: 250ms
+	, $easing: ease-in-out
+	, $properties: ( left, top, right, bottom, border-radius )
+) {
+	&::before {
+		$transitions: ( "transform": transform 75ms ease-in-out );
+		@each $prop in $properties {
+			// Can't seem to append a list to a list without flattening, so use a map
+			$transitions: map.set( $transitions, $prop, $prop $duration $easing );
+		}
+		transition: map.values( $transitions )
 	}
 }
 
-@mixin slab( $height: $height, $corner-radius: $corner-radius, $slope: $slope, $base-curve: $base-curve, $lip-curve: $lip-curve, $colour: $surface-colour, $transition: 500ms ease-in-out ) {
-	$lighting:		computeLighting( $height, $neumorphic-light, $colour );
+@mixin slab-lighting(
+	  $height:			$height
+	, $light:			$neumorphic-light
+	, $diffuse:			$surface-colour
+	, $stop-positions:	( 45%, 55% )
+) {
+	$lighting:	computeLighting( $height, $light, $diffuse );
 
 	$surface-lit:		map.get( map.get( $lighting, "surface" ), "lit" );
 	$surface-mid:		map.get( map.get( $lighting, "surface" ), "mid" );
-	$surface-bg:		map.get( map.get( $lighting, "surface" ), "bg"  );
 	$surface-drk:		map.get( map.get( $lighting, "surface" ), "drk" );
-	$surface-sha:		map.get( map.get( $lighting, "surface" ), "sha" );
-	
-	$offset-pct-x:		map.get( $lighting, "offset-pct-x" );
-	$offset-pct-y:		map.get( $lighting, "offset-pct-y" );
-	$offset-x:			map.get( $lighting, "offset-x" );
-	$offset-y:			map.get( $lighting, "offset-y" );
-
-	$blend: cornerRadiusToBlendPercentage( $corner-radius );
 
 	&::before {
-		content: "";
-		$radius-offset:	$height * 0.35;
-		$r:				$corner-radius + $radius-offset;
-
-		position:	absolute;
-		z-index:	-1;
-
-
-		border-radius:		$r;
 		background-image:	linear-gradient(
 			map.get( $neumorphic-light, "yaw" ) * -1,
-			  $surface-drk   0% ( 50% - $blend )
+			  $surface-drk list.nth($stop-positions, 1)
 			, $surface-mid
-			, $surface-lit 100% ( 50% + $blend )
+			, $surface-lit list.nth($stop-positions, 2)
 		);
-		background-size: 100% 100%;
-		background-position: 0% 0%;
-
-		filter: blur( $base-curve );
-
-		//@include slab-transition();
 	}
-	@include slab-height( $height );
-
-
 	&::after {
-		content: "";
-		
-		@include common();
-
-		background-color:	$surface-mid;
-		border-radius:		$corner-radius;
-
-		filter:				blur( $lip-curve );
+		background-color: $surface-mid;
 	}
+}
+
+@mixin slab-curve( 
+	  $base-curve:	$base-curve
+	, $lip-curve:	$lip-curve
+) {
+	&::before {
+		filter: blur( $base-curve );
+	}
+	&::after {
+		filter: blur( $lip-curve );
+	}
+}
+
+@mixin slab-corner(
+	$r: $corner-radius,
+	$h: $height
+) {
+	&::before {
+		border-radius: $r + ( math.abs($h) * 0.35 )
+	}
+	&::after {
+		border-radius: $r;
+	}
+}
+
+@mixin slab( 
+	$height: $height,
+	$corner-radius: $corner-radius,
+	$slope: $slope,
+	$base-curve: $base-curve,
+	$lip-curve: $lip-curve,
+	$colour: $surface-colour,
+) {
+	
+	&::before,
+	&::after {
+		content:	"";
+		position:	absolute;
+		z-index:	-1;
+		left:	0;
+		top:	0;
+		right:	0;
+		bottom:	0;
+	}
+
+	$gradient-blend: cornerRadiusToBlendPercentage( $corner-radius );
+
+	@include slab-height	( $height: $height );
+	@include slab-corner	( $r: $corner-radius, $h: $height);
+	@include slab-lighting	( $height: $height, $diffuse: $colour, $stop-positions: ( 50% - $gradient-blend, 50% + $gradient-blend ) );
+	@include slab-curve		( $base-curve: $base-curve, $lip-curve: $lip-curve );
+	@include slab-transition( );
+
 	position:	relative;
 	z-index:	0;
 }
