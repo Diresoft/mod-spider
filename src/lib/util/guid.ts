@@ -1,11 +1,9 @@
-import { Serializable } from "./serializable";
+import { NoAutoHydrator, Serializable, TypeHydrator, type Dehydrated } from "./serializable/decorators";
 
-@Serializable()
+@Serializable
+@NoAutoHydrator
 export class Guid {
-	
 	private readonly _guid_string = Guid._generate_guid_string();
-	private test : string = "nada";
-
 	private static _generate_guid_string() : string
 	{
 		return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -13,22 +11,9 @@ export class Guid {
 			return v.toString(16);
 		});
 	}
-
-	public static hydrate( guid : string ) : Guid
-	{
-		return Object.create( new Guid(), {
-			_guid_string: { value: guid }
-		}) as Guid
-	}
 	
-	toString()
-	{
-		Object.assign( this, { _guid_string: "ASDF" } );
-		return this._guid_string;
-	}
-
-	toJSON()
-	{
-		return this._guid_string;
+	@TypeHydrator
+	static _hydrator( d : Dehydrated<Guid> ) {
+		return Object.assign( new Guid(), d );
 	}
 }
