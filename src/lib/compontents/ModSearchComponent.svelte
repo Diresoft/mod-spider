@@ -1,5 +1,5 @@
 <script lang="ts">
-import { app } from '$lib/app/application_context';
+import { app } from '$lib/modules/app/application_context';
 import { afterUpdate, onMount } from 'svelte';
 
 // == Properties ==

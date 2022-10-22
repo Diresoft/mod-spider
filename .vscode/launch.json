@@ -5,18 +5,10 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Launch via NPM",
+			"command": "yarn tauri dev",
+			"name": "yarn tauri dev",
 			"request": "launch",
-			"runtimeArgs": [
-				"tauri",
-				"dev"
-			],
-			"runtimeExecutable": "yarn",
-			"skipFiles": [
-				"<node_internals>/**"
-			],
-			"type": "node"
+			"type": "node-terminal"
 		}
-
 	]
 }

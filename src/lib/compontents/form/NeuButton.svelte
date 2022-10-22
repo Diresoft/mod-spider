@@ -1,4 +1,4 @@
-<neubutton on:click>
+<!-- <neubutton on:click>
 	<slot></slot>
 </neubutton>
 
@@ -32,4 +32,4 @@ neubutton {
 		@include neumorphic.slab-height( $height: -5px );
 	}
 }
-</style>
+</style> -->

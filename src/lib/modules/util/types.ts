@@ -10,4 +10,7 @@ export type NonFunctionPropertyNames<T> = {
 }[keyof T];
 export type NonFunctionProperties<T> = Pick<T, NonFunctionPropertyNames<T>>;
 
-export type Constructor = { new (...args: any[]): any }; // eslint-disable-line @typescript-eslint/no-explicit-any
+export type Constructor<T = any> = abstract new(...args:[])=>T; // eslint-disable-line @typescript-eslint/no-explicit-any
+export class PrivateConstructorClass { private constructor() {} };
+export type Class = (Constructor | { prototype : PrivateConstructorClass, name : string} );
+export type DireInstanceType<T> = T extends abstract new(...args:unknown[])=>unknown ? InstanceType<T> : any;

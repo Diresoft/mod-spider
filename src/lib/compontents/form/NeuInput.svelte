@@ -1,4 +1,4 @@
-<script lang="ts">
+<!-- <script lang="ts">
 	export let type		: string	= "text";
 	export let value	: any		= null;
 
@@ -57,4 +57,4 @@ shim {
 		}
 	}
 }
-</style>
+</style> -->

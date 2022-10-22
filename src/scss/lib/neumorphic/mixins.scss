@@ -13,122 +13,73 @@
 @use 'vars.scss' as *;
 @use '../../theme.scss' as *;
 
+@mixin slab-lighting (
+	  $height:			$neumorphic-slab-height
+	, $slope:			$neumorphic-slab-slope
+	, $colour:			$neumorphic-slab-colour
+	, $light-yaw:		$neumorphic-light-yaw
+	, $light-strength:	$neumorphic-light-strength
+	, $base-contour:	$neumorphic-slab-base-contour
+	, $lip-contour:		$neumorphic-slab-lip-contour
+) {
+	$lit: color.scale( $colour, $lightness: $light-strength * 0.8, $saturation: -30%, $alpha: -30%);
+	$mid: $colour;
+	$drk: color.scale( $colour, $lightness: $light-strength * -2.5, $saturation: 10%, $alpha: -30%);
 
-@mixin slab-invert()
+	&::before
+	{
+		$xp: math.sin( $light-yaw );
+		$yp: math.cos( $light-yaw );
+		$hm: math.clamp( -1, unitless( $height ), 1 );
+
+		$ed:  math.abs($height) * math.tan( $slope );
+		$edc: $ed + $base-contour + 1;
+
+		$so: $ed * 0.5;
+		$xo: $edc * $xp * $hm;
+		$yo: $edc * $yp * $hm;
+
+		$si: 0px;
+		$xi: $lip-contour * $xp * $hm;
+		$yi: $lip-contour * $yp * $hm;
+		
+		box-shadow:
+			        (-$xo) (-$yo) $base-contour $so $lit
+			,       ( $xo) ( $yo) $base-contour $so $drk
+			, inset ( $xi) ( $yi) $lip-contour  $si $lit
+			, inset (-$xi) (-$yi) $lip-contour  $si $drk
+		;
+	}
+}
+
+@mixin slab-corner( $corner-radius: $neumorphic-slab-corner-radius )
 {
-	&::before {
-		transform: scale3d( -1, -1, -1 );
-	}
-}
-
-@mixin slab-height( $height: $height, $slope: $slope )
-{
-	$safe-height: math.abs( $height );
-	@if $height < 0 {
-		@include slab-invert();
-	}
-
-	$edge-run: slopeToDistance( $safe-height, $slope );
-	&::before {
-		left:	$edge-run * -1;
-		top:	$edge-run * -1;
-		right:	$edge-run * -1;
-		bottom:	$edge-run * -1;
-	}
-}
-
-@mixin slab-transition(
-	  $duration: 250ms
-	, $easing: ease-in-out
-	, $properties: ( left, top, right, bottom, border-radius )
-) {
-	&::before {
-		$transitions: ( "transform": transform 75ms ease-in-out );
-		@each $prop in $properties {
-			// Can't seem to append a list to a list without flattening, so use a map
-			$transitions: map.set( $transitions, $prop, $prop $duration $easing );
-		}
-		transition: map.values( $transitions )
-	}
-}
-
-@mixin slab-lighting(
-	  $height:			$height
-	, $light:			$neumorphic-light
-	, $diffuse:			$surface-colour
-	, $stop-positions:	( 45%, 55% )
-) {
-	$lighting:	computeLighting( $height, $light, $diffuse );
-
-	$surface-lit:		map.get( map.get( $lighting, "surface" ), "lit" );
-	$surface-mid:		map.get( map.get( $lighting, "surface" ), "mid" );
-	$surface-drk:		map.get( map.get( $lighting, "surface" ), "drk" );
-
-	&::before {
-		background-image:	linear-gradient(
-			map.get( $neumorphic-light, "yaw" ) * -1,
-			  $surface-drk list.nth($stop-positions, 1)
-			, $surface-mid
-			, $surface-lit list.nth($stop-positions, 2)
-		);
-	}
-	&::after {
-		background-color: $surface-mid;
-	}
-}
-
-@mixin slab-curve( 
-	  $base-curve:	$base-curve
-	, $lip-curve:	$lip-curve
-) {
-	&::before {
-		filter: blur( $base-curve );
-	}
-	&::after {
-		filter: blur( $lip-curve );
-	}
-}
-
-@mixin slab-corner(
-	$r: $corner-radius,
-	$h: $height
-) {
-	&::before {
-		border-radius: $r + ( math.abs($h) * 0.35 )
-	}
-	&::after {
-		border-radius: $r;
-	}
-}
-
-@mixin slab( 
-	$height: $height,
-	$corner-radius: $corner-radius,
-	$slope: $slope,
-	$base-curve: $base-curve,
-	$lip-curve: $lip-curve,
-	$colour: $surface-colour,
-) {
-	
 	&::before,
-	&::after {
-		content:	"";
-		position:	absolute;
-		z-index:	-1;
-		left:	0;
-		top:	0;
-		right:	0;
-		bottom:	0;
+	&::after{
+		border-radius: $corner-radius;
 	}
+}
 
-	$gradient-blend: cornerRadiusToBlendPercentage( $corner-radius );
-
-	@include slab-height	( $height: $height );
-	@include slab-corner	( $r: $corner-radius, $h: $height);
-	@include slab-lighting	( $height: $height, $diffuse: $colour, $stop-positions: ( 50% - $gradient-blend, 50% + $gradient-blend ) );
-	@include slab-curve		( $base-curve: $base-curve, $lip-curve: $lip-curve );
-	@include slab-transition( );
-
-	position:	relative;
-	z-index:	0;
+@mixin slab(
+	  $height:			$neumorphic-slab-height
+	, $slope:			$neumorphic-slab-slope
+	, $colour:			$neumorphic-slab-colour
+	, $corner-radius: $neumorphic-slab-corner-radius
+	, $light-yaw:		$neumorphic-light-yaw
+	, $light-strength:	$neumorphic-light-strength
+) {
+	&::before {
+		content: "";
+		position: absolute;
+		z-index: -1;
+		left:	0;
+		right:	0;
+		top:	0;
+		bottom:	0;
+		transition:
+			  box-shadow 150ms ease-in-out
+		;
+	}
+	@include slab-corner	( $corner-radius );
+	@include slab-lighting	( $height, $slope, $colour, $light-yaw, $light-strength );
 }

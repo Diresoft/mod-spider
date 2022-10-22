@@ -1,37 +1,45 @@
 <script lang="ts">
-	import { app } from '$lib/app/application_context';
-	import Symbol from '$lib/compontents/Symbol.svelte';
-	import NeuButton from '$lib/compontents/form/NeuButton.svelte';
-	import NeuInput from '$lib/compontents/form/NeuInput.svelte';
-	import ModSearchComponent from '$lib/compontents/ModSearchComponent.svelte';
+	import { app } from '$lib/modules/app/application_context';
+	import { ModPlan } from '$lib/modules/app/project/ModPlan';
 
-	function addMod()
-	{
-		console.log("Adding mod")
-	}
-
-	let mod_id : any;
+	let plans : ModPlan[] = [ new ModPlan(), new ModPlan(), new ModPlan(), new ModPlan() ];
 </script>
 
+
+<splash-modal>
+	df,mjhaslkdjfhaslk
+</splash-modal>
+
+
+
+<!-- 
 <mod-search-panel>
+
+
+
 	<NeuInput bind:value={mod_id} type="text" placeholder="Mod Id" />
 	<NeuButton on:click={addMod} >
 		<Symbol>add</Symbol>
 	</NeuButton>
 	<ModSearchComponent search={mod_id} />
 
-</mod-search-panel>
+</mod-search-panel> -->
 
 <style lang='scss'>
-@use '@scss/lib/neumorphic';
-@use '@scss/theme' as theme;
+@use '../scss/lib/neumorphic.scss';
 
-mod-search-panel {
+splash-modal
+{
 	display: block;
-	@include neumorphic.slab();
+	position: absolute;
 
-	margin: 2em;
-	padding: 2em;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+
+	padding: 5em;
+
+	@include neumorphic.slab();
 }
 
 </style>

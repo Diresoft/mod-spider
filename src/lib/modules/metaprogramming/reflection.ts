@@ -1,5 +1,5 @@
-import { NonReflectedTypeError, _own_class } from "./decorators";
-import type { Constructor } from "../types";
+import { NonReflectedTypeError, _own_class } from "./serialization_decorators";
+import type { Constructor } from "../util/types";
 
 export function GetClassOf<T extends Constructor>( target : InstanceType<T> )
 {
