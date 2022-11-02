@@ -36,6 +36,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"beercss": "^2.3.0",
 		"tauri-plugin-sql-api": "github:tauri-apps/tauri-plugin-sql"
 	}
 }

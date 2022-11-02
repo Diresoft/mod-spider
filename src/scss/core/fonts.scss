@@ -4,11 +4,16 @@
 }
 @font-face {
 	font-family: KellySlab;
-	src: url('fonts/KellySlab/KellySlab-Regular.ttf') format('truetype');
+	src: url('fonts/Kelly_Slab/KellySlab-Regular.ttf') format('truetype');
 }
 @font-face {
 	font-family: Arima;
 	src: url('fonts/Arima/Arima-VariableFont_wght.ttf') format('truetype');
+	font-weight: 100 900;
+}
+@font-face {
+	font-family: Comfortaa;
+	src: url('fonts/Comfortaa/Comfortaa-VariableFont_wght.ttf') format('truetype');
 	font-weight: 100 900;
 }
 

@@ -13,6 +13,19 @@
 @use 'vars.scss' as *;
 @use '../../theme.scss' as *;
 
+@function makeBoxShadows (
+	$lit, $drk, $mid,
+	$xo, $yo, $base-contour, $so,
+	$xi, $yi, $lip-contour,  $si
+) {
+	@return (
+				(-$xo) (-$yo) $base-contour $so $lit
+		,       ( $xo) ( $yo) $base-contour $so $drk
+		, inset ( $xi) ( $yi) $lip-contour  $si $lit
+		, inset (-$xi) (-$yi) $lip-contour  $si $drk
+	);
+}
+
 @mixin slab-lighting (
 	  $height:			$neumorphic-slab-height
 	, $slope:			$neumorphic-slab-slope
@@ -21,39 +34,45 @@
 	, $light-strength:	$neumorphic-light-strength
 	, $base-contour:	$neumorphic-slab-base-contour
 	, $lip-contour:		$neumorphic-slab-lip-contour
+	, $invert-shadows:  false
 ) {
-	$lit: color.scale( $colour, $lightness: $light-strength * 0.8, $saturation: -30%, $alpha: -30%);
+	$lit: color.scale( $colour, $lightness: $light-strength * 0.8, $saturation: -30%);
 	$mid: $colour;
-	$drk: color.scale( $colour, $lightness: $light-strength * -2.5, $saturation: 10%, $alpha: -30%);
+	$drk: color.scale( $colour, $lightness: $light-strength * -2.5, $saturation: 10%);
 
-	&::before
-	{
-		$xp: math.sin( $light-yaw );
-		$yp: math.cos( $light-yaw );
-		$hm: math.clamp( -1, unitless( $height ), 1 );
+	$xp: math.sin( $light-yaw );
+	$yp: math.cos( $light-yaw );
+	$hm: math.clamp( -1, unitless( $height ), 1 );
 
-		$ed:  math.abs($height) * math.tan( $slope );
-		$edc: $ed + $base-contour + 1;
+	$ed:  math.abs(slopeToDistance($height, $slope));
+	$edc: $ed + $base-contour + 1;
 
-		$so: $ed * 0.5;
-		$xo: $edc * $xp * $hm;
-		$yo: $edc * $yp * $hm;
+	$so: $ed * 0.5;
+	$xo: $edc * $xp * $hm;
+	$yo: $edc * $yp * $hm;
 
-		$si: 0px;
-		$xi: $lip-contour * $xp * $hm;
-		$yi: $lip-contour * $yp * $hm;
-		
-		box-shadow:
-			        (-$xo) (-$yo) $base-contour $so $lit
-			,       ( $xo) ( $yo) $base-contour $so $drk
-			, inset ( $xi) ( $yi) $lip-contour  $si $lit
-			, inset (-$xi) (-$yi) $lip-contour  $si $drk
-		;
+	$si: 0px;
+	$xi: $lip-contour * $xp * $hm;
+	$yi: $lip-contour * $yp * $hm;
+	
+	@if( $invert-shadows ) {
+		$xo: -$xo;
+		$yo: -$yo;
+
+		$xi: -$xi;
+		$yi: -$yi;
 	}
+	box-shadow: makeBoxShadows(
+		$lit, $drk, $mid,
+		$xo, $yo, $base-contour, $so,
+		$xi, $yi, $lip-contour,  $si
+	);
 }
+
 
 @mixin slab-corner( $corner-radius: $neumorphic-slab-corner-radius )
 {
+	border-radius: $corner-radius;
 	&::before,
 	&::after{
 		border-radius: $corner-radius;
@@ -62,24 +81,29 @@
 
 @mixin slab(
 	  $height:			$neumorphic-slab-height
+	, $border-width:	10px
 	, $slope:			$neumorphic-slab-slope
 	, $colour:			$neumorphic-slab-colour
-	, $corner-radius: $neumorphic-slab-corner-radius
+	, $corner-radius:	$neumorphic-slab-corner-radius
 	, $light-yaw:		$neumorphic-light-yaw
 	, $light-strength:	$neumorphic-light-strength
+	, $base-contour:	$neumorphic-slab-base-contour
+	, $lip-contour:		$neumorphic-slab-lip-contour
+	, $invert-shadows:  false
 ) {
 	&::before {
+		$offset: math.abs( slopeToDistance($height, $slope) + $base-contour) * 0;
 		content: "";
 		position: absolute;
-		z-index: -1;
-		left:	0;
-		right:	0;
-		top:	0;
-		bottom:	0;
+		z-index: 1;
+		left:	-$offset;
+		right:	-$offset;
+		top:	-$offset;
+		bottom:	-$offset;
 		transition:
 			  box-shadow 150ms ease-in-out
 		;
+		@include slab-lighting	( $height, $slope, $colour, $light-yaw, $light-strength );
 	}
 	@include slab-corner	( $corner-radius );
-	@include slab-lighting	( $height, $slope, $colour, $light-yaw, $light-strength );
 }

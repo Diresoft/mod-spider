@@ -1,6 +1,5 @@
 import { Serializable } from "$lib/modules/metaprogramming/serialization_decorators";
 import { Guid } from "$lib/modules/util/Guid";
-import type { Class, Constructor, DireInstanceType } from "$lib/modules/util/types";
 
 @Serializable
 export class ModPlanDescriptor {

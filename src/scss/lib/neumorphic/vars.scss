@@ -1,11 +1,11 @@
 @use '@scss/theme/default.scss' as *;
 
-$neumorphic-slab-corner-radius:	15px;
+$neumorphic-slab-corner-radius:	10px;
 $neumorphic-slab-height:		15px;
-$neumorphic-slab-slope:			10deg;
+$neumorphic-slab-slope:			5deg;
 $neumorphic-slab-colour:		$window-bg;
-$neumorphic-slab-base-contour:	5px;
-$neumorphic-slab-lip-contour:	2px;
+$neumorphic-slab-base-contour:	3px;
+$neumorphic-slab-lip-contour:	1px;
 
 $neumorphic-light-yaw:			30deg;
 $neumorphic-light-strength:		15%;

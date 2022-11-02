@@ -87,7 +87,6 @@ export function Serializable<T extends _class>( base_class : T ) : T
 	base_class.prototype.toJSON = function( this : T ) : DireTypedJsonObject
 	{
 		let dehydrated = original_toJSON ? original_toJSON.call( this ) : this; // Run the provided toJSON for the initial serialization, then augment the results
-		console.log( `Dehydrate<${meta.ClassName}>`, this, dehydrated );
 		if ( typeof dehydrated === 'object' && !Array.isArray( dehydrated ) )
 		{	// If we're dehydrating an object, we need to strip it's prototype and filter out any non serialized members
 			dehydrated = new Proxy ( Object.assign( {}, this ), {
@@ -124,7 +123,6 @@ export function NoAutoHydrator<T extends _class>( base_class : T ) : void
 
 export function DoNotSerialize<T extends _class>( base_class : _safe_instance_type<T>, prop_key : string | symbol ) : void
 {
-	console.log( `DoNotSerialize<${base_class.constructor.name} - ${prop_key.toString()}`)
 	const meta = (base_class[reflection] = reflect<T>( base_class.constructor ));
 	meta.NonSerializedMembers.push( prop_key );
 }

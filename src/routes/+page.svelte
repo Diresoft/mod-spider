@@ -1,45 +1,80 @@
 <script lang="ts">
-	import { app } from '$lib/modules/app/application_context';
-	import { ModPlan } from '$lib/modules/app/project/ModPlan';
+	import { goto } from '$app/navigation';
+	import PushBreadcrumb from '$lib/compontents/Breadcrumbs/PushBreadcrumb.svelte';
+	import ImageCover from '$lib/compontents/ImageCover.svelte';
+	import { app, SINGLETON_PLAN } from '$lib/modules/app/application_context';
+	import type { ModPlan } from '$lib/modules/app/project/ModPlan';
+	import { btnAnchor } from '$lib/modules/util/helpers';
 
-	let plans : ModPlan[] = [ new ModPlan(), new ModPlan(), new ModPlan(), new ModPlan() ];
+	let plans : ModPlan[] = [ SINGLETON_PLAN ];
+	const cover_img_src = "covers/logo_white.png"
+
+	function open_plan( plan : ModPlan )
+	{
+		goto(`/plan_home/${plan.guid.toString()}`);
+	}
 </script>
 
+<PushBreadcrumb href="/" text="Home"/>
 
-<splash-modal>
-	df,mjhaslkdjfhaslk
-</splash-modal>
-
-
-
-<!-- 
-<mod-search-panel>
-
-
-
-	<NeuInput bind:value={mod_id} type="text" placeholder="Mod Id" />
-	<NeuButton on:click={addMod} >
-		<Symbol>add</Symbol>
-	</NeuButton>
-	<ModSearchComponent search={mod_id} />
-
-</mod-search-panel> -->
+<article class="responsive no-padding absolute center middle border">
+	<div class="grid">
+		<div class="s3">
+			<ImageCover src="covers/skyrim.jpg" />
+		</div>
+		<recent-plans-container class="s9 padding" >
+			<h5>Recent Plans</h5>
+			<list>
+				{#each plans as plan}
+					<div class="row">
+						<img class="circle tiny" src={cover_img_src}>
+						<div class="max">
+							<h6>{plan.descriptor.display_title}</h6>
+							<p>{plan.descriptor.description}</p>
+						</div>
+						<nav class="no-space">
+							<button class="border left-round" on:click={ btnAnchor( `/plan/${plan.guid}/details`)}>
+								<i>rocket_launch</i> <!-- Next best: <i>arrow_insert</i> -->
+								<span>Open</span>
+							</button>
+							<button class="border right-round">
+								<i>delete_forever</i>
+								<span>Delete</span>
+							</button>
+						</nav>
+					</div>
+				{/each}
+			</list>
+			<nav class="no-space">
+				<button class="border left-round max">
+					<i>more_horiz</i>
+					<span>Browse</span>
+				</button>
+				<button class="border right-round max">
+					<i>add</i>
+					<span>Add</span>
+				</button>
+			</nav>
+		</recent-plans-container>
+	</div>
+</article>
 
 <style lang='scss'>
-@use '../scss/lib/neumorphic.scss';
+// https://www.beercss.com/
+recent-plans-container {
+	display: flex;
+	flex-direction: column;
 
-splash-modal
-{
-	display: block;
-	position: absolute;
+	& > h5 {
+		align-self: center;
+	}
 
-	left: 50%;
-	top: 50%;
-	transform: translate(-50%, -50%);
+	& > list {
+		flex-grow: 1;
+	}
 
-	padding: 5em;
-
-	@include neumorphic.slab();
+	& > nav {
+		align-self: stretch;
+	}
 }
-
 </style>
