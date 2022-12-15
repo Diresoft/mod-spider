@@ -10,19 +10,19 @@
 
 <div>
 	<nav class="tiny-padding">
-		<button class="responsive transparent vertical small" on:click={ btnAnchor( `/plan/${data.guid}/details` ) }>
+		<button class="responsive transparent vertical small" on:click={ btnAnchor( `/planner/${data.plan.guid}/details` ) }>
 			<i>home</i>
 			<span>Details</span>
 		</button>
-		<button class="responsive transparent vertical small" on:click={ btnAnchor( `/plan/${data.guid}/plan` ) }>
+		<button class="responsive transparent vertical small" on:click={ btnAnchor( `/planner/${data.plan.guid}/plan` ) }>
 			<i>rebase_edit</i>
 			<span>Plan</span>
 		</button>
-		<button class="responsive transparent vertical small" on:click={ btnAnchor( `/plan/${data.guid}/graph` ) }>
+		<button class="responsive transparent vertical small" on:click={ btnAnchor( `/planner/${data.plan.guid}/graph` ) }>
 			<i>share</i>
 			<span>Graph</span>
 		</button>
-		<button class="responsive transparent vertical small" on:click={ btnAnchor( `/plan/${data.guid}/guide` ) }>
+		<button class="responsive transparent vertical small" on:click={ btnAnchor( `/planner/${data.plan.guid}/guide` ) }>
 			<i>auto_awesome</i>
 			<span>Guide</span>
 		</button>

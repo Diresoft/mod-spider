@@ -1,26 +1,38 @@
 @font-face {
 	font-family: Gruppo;
-	src: url('fonts/Gruppo/Gruppo-Regular.ttf') format('truetype');
+	src: url('/fonts/Gruppo/Gruppo-Regular.ttf') format('truetype');
 }
 @font-face {
 	font-family: KellySlab;
-	src: url('fonts/Kelly_Slab/KellySlab-Regular.ttf') format('truetype');
+	src: url('/fonts/Kelly_Slab/KellySlab-Regular.ttf') format('truetype');
 }
 @font-face {
 	font-family: Arima;
-	src: url('fonts/Arima/Arima-VariableFont_wght.ttf') format('truetype');
+	src: url('/fonts/Arima/Arima-VariableFont_wght.ttf') format('truetype');
 	font-weight: 100 900;
 }
 @font-face {
 	font-family: Comfortaa;
-	src: url('fonts/Comfortaa/Comfortaa-VariableFont_wght.ttf') format('truetype');
+	src: url('/fonts/Comfortaa/Comfortaa-VariableFont_wght.ttf') format('truetype');
 	font-weight: 100 900;
+}
+@font-face {
+	font-family: Nunito;
+	src: url('/fonts/GoogleFonts/Nunito/Nunito-VariableFont_wght.ttf') format('truetype');
+	font-weight: 100 900;
+	font-style: normal;
+}
+@font-face {
+	font-family: Nunito;
+	src: url('/fonts/GoogleFonts/Nunito/Nunito-Italic-VariableFont_wght.ttf') format('truetype');
+	font-weight: 100 900;
+	font-style: italic;
 }
 
 @font-face {
 	font-family: 'Material Symbol';
 	font-style: normal;
-	src: url( 'fonts/GoogleFonts/MaterialSymbolsSharp.ttf')  format('truetype')
+	src: url( '/fonts/GoogleFonts/MaterialSymbolsSharp.ttf')  format('truetype')
 }
 
 .material-symbol {

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { crumbs } from "$lib/modules/app/application_context";
+	import { app } from "$lib/modules/app/application_context";
 	import { onMount } from "svelte";
 
 
@@ -10,13 +10,13 @@
 
 	onMount( () => {
 		const crumb_data = { text, href, icon, postfix_icon };
-		crumbs.update( (c) => {
+		app.crumbs.update( (c) => {
 			c.push( crumb_data );
 			return c;
 		})
 
 		return () => {
-			crumbs.update( (c) => {
+			app.crumbs.update( (c) => {
 				return c.filter( ( d ) => d !== crumb_data )
 			})
 		}

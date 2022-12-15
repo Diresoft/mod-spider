@@ -14,3 +14,6 @@ export type Constructor<T = any> = abstract new(...args:[])=>T; // eslint-disabl
 export class PrivateConstructorClass { private constructor() {} };
 export type Class = (Constructor | { prototype : PrivateConstructorClass, name : string} );
 export type DireInstanceType<T> = T extends abstract new(...args:unknown[])=>unknown ? InstanceType<T> : any;
+
+
+export const FOREVER = new Promise<void>( () => {} );

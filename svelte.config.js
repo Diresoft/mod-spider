@@ -5,7 +5,8 @@ import { SassAlias } from 'svelte-preprocess-sass-alias-import';
 
 const alias = new SassAlias({
 	//"$scss": 'src/scss',
- 	"@scss": ["src", "scss"]
+ 	"@scss": ["src", "scss"],
+ 	"@sass": ["src", "scss"]
 });
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -26,7 +27,7 @@ const config = {
 	kit: {
 		adapter: adapter(),
 		alias: {
-			"$lib": resolve( './src/scss' )
+			"$lib": resolve( './src/lib' )
 		}
 	}
 };

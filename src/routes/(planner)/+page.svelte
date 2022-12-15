@@ -8,11 +8,6 @@
 
 	let plans : ModPlan[] = [ SINGLETON_PLAN ];
 	const cover_img_src = "covers/logo_white.png"
-
-	function open_plan( plan : ModPlan )
-	{
-		goto(`/plan_home/${plan.guid.toString()}`);
-	}
 </script>
 
 <PushBreadcrumb href="/" text="Home"/>
@@ -33,7 +28,7 @@
 							<p>{plan.descriptor.description}</p>
 						</div>
 						<nav class="no-space">
-							<button class="border left-round" on:click={ btnAnchor( `/plan/${plan.guid}/details`)}>
+							<button class="border left-round" on:click={ btnAnchor( `/planner/${plan.guid}/details`) }>
 								<i>rocket_launch</i> <!-- Next best: <i>arrow_insert</i> -->
 								<span>Open</span>
 							</button>
