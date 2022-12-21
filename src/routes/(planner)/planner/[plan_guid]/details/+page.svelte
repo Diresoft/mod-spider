@@ -1,5 +1,5 @@
 <script lang="ts">
-	import PushBreadcrumb from '$lib/compontents/Breadcrumbs/PushBreadcrumb.svelte';
+	import PushBreadcrumb from '$lib/components/Breadcrumbs/PushBreadcrumb.svelte';
 	import type { PageData } from './$types';
 
 	export let data: PageData;

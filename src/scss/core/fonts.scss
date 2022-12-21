@@ -28,23 +28,3 @@
 	font-weight: 100 900;
 	font-style: italic;
 }
-
-@font-face {
-	font-family: 'Material Symbol';
-	font-style: normal;
-	src: url( '/fonts/GoogleFonts/MaterialSymbolsSharp.ttf')  format('truetype')
-}
-
-.material-symbol {
-	font-family: 'Material Symbol';
-	font-weight: normal;
-	font-style: normal;
-	font-size: 24px;  /* Preferred icon size */
-	display: inline-block;
-	line-height: 1;
-	text-transform: none;
-	letter-spacing: normal;
-	word-wrap: normal;
-	white-space: nowrap;
-	direction: ltr;
-}

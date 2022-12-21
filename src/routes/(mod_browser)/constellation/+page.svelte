@@ -190,7 +190,6 @@ results {
 			justify-content:	center;
 
 			padding:		0.5em;
-			border-left: solid 10px linear-gradient( to right, black, white);
 			border-radius:	0;
 			
 

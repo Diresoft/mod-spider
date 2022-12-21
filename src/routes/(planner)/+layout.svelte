@@ -2,9 +2,11 @@
 	import 'beercss';
 	import '$lib/beercss/theme-override.scss';
 
+	import 'material-symbols';
+
 	import { btnAnchor } from '$lib/modules/util/helpers';
 	import { app } from '$lib/modules/app/application_context';	
-	import Breadcrumbs from '$lib/compontents/Breadcrumbs/Breadcrumbs.svelte';
+	import Breadcrumbs from '$lib/components/Breadcrumbs/Breadcrumbs.svelte';
 	import type { LayoutData } from './$types';
 	import { page } from '$app/stores';
 	import { afterNavigate } from '$app/navigation';
@@ -80,17 +82,27 @@
 </content>
 
 <style lang="scss">
+
+// This is the root style sheet for this section of the app, so use a global target to re-style the Svelte created div to what I want
 :global(body > div){
+
+	// Absolutely ensure we don't scroll or escape the base frame
 	height:		100vh;
 	width:		100vw;
 	overflow:	hidden;
 
 	display:		flex;
 	flex-direction:	column;
+
+	position:		relative;
 }
 content {
-	position: relative;
-	flex-grow: 1;
+	position:		relative;
+	flex-grow:		1;
+
+	height:			100%;
+	display:		flex;
+	flex-direction:	row;
 }
 app-menu {
 	position: fixed;

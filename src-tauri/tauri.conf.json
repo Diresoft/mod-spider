@@ -63,13 +63,14 @@
     },
     "windows": [
       {
-        "fullscreen":	false,
-        "width":		1200,
-        "height":		720,
-        "resizable":	true,
-		"minWidth":		1200,
-		"minHeight":	720,
-        "title":		"Modding Master"
+        "fullscreen":		false,
+        "width":			1200,
+        "height":			720,
+        "resizable":		true,
+		"minWidth":			1200,
+		"minHeight":		720,
+        "title":			"Modding Master",
+		"fileDropEnabled":	false
       }
     ]
   }

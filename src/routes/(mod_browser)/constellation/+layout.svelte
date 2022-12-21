@@ -1,8 +1,10 @@
 <script lang="ts">
 	import 'beercss';
 	import '$lib/beercss/theme-override.scss';
-	import PushBreadcrumb from '$lib/compontents/Breadcrumbs/PushBreadcrumb.svelte';
-	import Breadcrumbs from '$lib/compontents/Breadcrumbs/Breadcrumbs.svelte';
+	import 'material-symbols';
+	
+	import PushBreadcrumb from '$lib/components/Breadcrumbs/PushBreadcrumb.svelte';
+	import Breadcrumbs from '$lib/components/Breadcrumbs/Breadcrumbs.svelte';
 	import { appWindow, WebviewWindow } from '@tauri-apps/api/window';
 	import { writable, type Writable } from 'svelte/store';
 	import { setContext } from 'svelte';
