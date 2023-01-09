@@ -34,7 +34,7 @@ async function toggleMaximize()
 
 
 <style lang="scss">
-	@use '@scss/theme.scss' as theme;
+	@use '$scss/theme.scss' as theme;
 	.flip {
 		transform: rotate(180deg);
 	}

@@ -4,6 +4,7 @@ import { DoNotSerialize, Serializable } from "../metaprogramming/serialization_d
 import type { Reference } from "../database/Reference";
 import { SLEEP } from "../util/helpers";
 import { FOREVER } from "../util/types";
+import { Database } from "../metaprogramming/database_decorators";
 
 @Serializable
 export class ModTag
@@ -82,6 +83,7 @@ export class PatreonModData extends ModScraperInterface
 
 
 @Serializable
+//@Database.Manage
 export class Mod
 {
 	// -~= Properties =~-
@@ -93,6 +95,7 @@ export class Mod
 
 
 	// - Public
+	//@Database.PrimaryKey
 	public readonly	guid	: Guid	= Guid.Create();
 	
 	public get data()

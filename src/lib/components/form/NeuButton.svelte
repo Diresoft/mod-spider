@@ -3,8 +3,8 @@
 </neubutton>
 
 <style lang='scss'>
-@use '@scss/lib/neumorphic';
-@use '@scss/theme';
+@use '$scss/lib/neumorphic';
+@use '$scss/theme';
 
 neubutton {
 	position:	relative;

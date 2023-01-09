@@ -21,6 +21,7 @@ export class Guid {
 	}
 
 	static Create() { return new Guid(); }
+	static From( str: string ) { return new Guid( str ); }
 
 	@TypeHydrator
 	static _hydrator( d : string ) { // Stored in JSON as nothing more than a string

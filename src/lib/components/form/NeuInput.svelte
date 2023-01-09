@@ -24,8 +24,8 @@
 </shim>
 
 <style lang="scss">
-@use '@scss/lib/neumorphic.scss';
-@use '@scss/theme';
+@use '$scss/lib/neumorphic.scss';
+@use '$scss/theme';
 
 shim {
 	position:	relative;

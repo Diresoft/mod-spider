@@ -5,6 +5,7 @@ export const reflection		= Symbol( "@Serializable::prop::reflection"		);
        const _typeHydrator	= Symbol( "@Serializable::func::_typeHydrator"	);
        const _hydrator		= Symbol( "@Serializable::func::_hydrator"		);
        const _dehydrator	= Symbol( "@Serializable::func::_dehydrator"	);
+export const SERIALIZED_TYPE_NAME = Symbol( "@Serializable::func::SERIALIZED_TYPE_NAME" );
 
 // Internal utility types
 class private_ctor { private constructor() {} };
@@ -48,10 +49,23 @@ export class NonReflectedTypeError< T extends _class > extends TypeError
 	}
 }
 
-const _mirror : Map<string, type_reflection<_class>> = new Map();
-function reflect<T extends _class>( incident : T | string ) : type_reflection<T>
+function getIncidentName( incident: any ): string
 {
-	const incident_type_name = typeof incident === 'string' ? incident : incident.name;
+	//console.log( `getIncidentName`, incident, incident.prototype, incident.prototype[SERIALIZED_TYPE_NAME], incident.prototype[reflection] );
+	if ( typeof incident === 'string' )
+	{
+		return incident
+	}
+	return incident.name;
+}
+
+const _mirror : Map<string, type_reflection<_class>> = new Map();
+export function reflect<T extends _class>( incident : T | string ) : type_reflection<T>
+{
+	console.log( `reflect`, incident, incident.prototype, incident.prototype[SERIALIZED_TYPE_NAME], incident.prototype[reflection] );
+	if ( incident.prototype && incident.prototype[reflection] ) return incident.prototype[reflection];
+
+	const incident_type_name = getIncidentName( incident );
 	if ( !_mirror.has( incident_type_name ) )
 	{
 		if ( typeof incident === 'string' ) throw new NonReflectedTypeError( null, incident ); // Can't create a reflection from a string

@@ -1,7 +1,7 @@
-@use '@scss/core/colours.scss';
+@use '$scss/core/colours.scss';
 
-@use '@scss/core/fonts.scss';
-@forward '@scss/core/fonts.scss';
+@use '$scss/core/fonts.scss';
+@forward '$scss/core/fonts.scss';
 
 $window-bg: colours.$cool-black;
 

@@ -89,7 +89,7 @@
 
 
 <style lang="scss">
-@use '@scss/core/fonts.scss';
+@use '$scss/core/fonts.scss';
 
 @keyframes spin {
 	from {
