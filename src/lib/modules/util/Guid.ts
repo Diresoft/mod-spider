@@ -1,33 +1,23 @@
-import { NoAutoHydrator, Serializable, TypeHydrator } from "../metaprogramming/serialization_decorators";
+import { Database } from "../meta/database";
+import { DireReflection } from "../meta/shared";
 
 const constellation : Map<string, Guid> = new Map();
 
-@Serializable
-@NoAutoHydrator
+@Database.Manage_ProtectedType
+@DireReflection.Class()
 export class Guid {
-	protected readonly value : string | undefined;
+	protected readonly value : string;
 
-	/** Construct a Guid object from a uuid string.
-	 * If the uuid string has already been used this run, will retrieve the existing instance
-	 * for that uuid so object comparison is valid
-	 */
-	private constructor( in_guid_string : string = crypto.randomUUID() )
+	public static Create() { return new Guid(); }
+	protected constructor( guid_string : string = crypto.randomUUID() )
 	{
-		if ( constellation.has( in_guid_string ) ) return constellation.get( in_guid_string ) as Guid;
-		else {
-			this.value = in_guid_string;
-			constellation.set( in_guid_string, this );
-		}
+		this.value = guid_string; // Satisfy readonly constraint by setting this even if we'll return another instance
+		if ( constellation.has( guid_string ) ) return constellation.get( guid_string ) as Guid; // Check if this GUID has already been instantiated. Guids are unique, so use that one instead.
+		constellation.set( guid_string, this ); // Didn't already have this Guid, so cache it and move on
+		return this;
 	}
-
-	static Create() { return new Guid(); }
-
-	@TypeHydrator
-	static _hydrator( d : string ) { // Stored in JSON as nothing more than a string
-		return new Guid( d );
-	}
-
-	[Symbol.toPrimitive](){ return this.value; }
-	toString(){ return this.value; }
-	toJSON() { return this.value; }
+	
+	[Symbol.toPrimitive]()	{ return this.value; }
+	toString()				{ return this.value; }
+	toJSON()				{ return this.value; }
 }

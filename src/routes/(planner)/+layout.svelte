@@ -17,7 +17,6 @@
 
 	import { WebviewWindow } from "@tauri-apps/api/window";
 	import { TEMP_ALL_MODS } from "$lib/modules/app/application_context";
-	import { JsonSerialize } from "$lib/modules/metaprogramming/serialization_decorators";
 
 
 	listen('tauri://file-drop', event => {
