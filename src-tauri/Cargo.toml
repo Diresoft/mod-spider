@@ -1,8 +1,8 @@
 [package]
-name = "mod-planner"
+name = "mod-spider"
 version = "0.0.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "Traverse the web of mod dependencies with the ease of a spider."
+authors = ["Piet Voute"]
 license = ""
 repository = ""
 edition = "2021"
