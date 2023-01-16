@@ -1,11 +1,8 @@
 import { Guid } from "../util/Guid";
 import { fetch, ResponseType } from '@tauri-apps/api/http';
-import { DoNotSerialize, Serializable } from "../metaprogramming/serialization_decorators";
-import type { Reference } from "../database/Reference";
-import { SLEEP } from "../util/helpers";
-import { FOREVER } from "../util/types";
+import { DireReflection } from "../meta/shared";
+import { Database } from "../meta/database";
 
-@Serializable
 export class ModTag
 {
 	public readonly guid	: Guid = Guid.Create();
@@ -13,7 +10,6 @@ export class ModTag
 	constructor( value : string ) { this.value = value; }
 }
 
-@Serializable
 export abstract class ModScraperInterface
 {
 	public	owner		: Mod 		| undefined;
@@ -33,7 +29,6 @@ export abstract class ModScraperInterface
 	protected abstract onLoad() : Promise<ModScraperInterface>;
 }
 
-@Serializable
 export class NexusModData extends ModScraperInterface
 {
 	public nexus_id	: number;
@@ -71,7 +66,6 @@ export class NexusModData extends ModScraperInterface
 	}
 }
 
-@Serializable
 export class PatreonModData extends ModScraperInterface
 {
 	protected onLoad(): Promise<ModScraperInterface> {
@@ -80,25 +74,38 @@ export class PatreonModData extends ModScraperInterface
 
 }
 
-
-@Serializable
+@Database.Manage
+@DireReflection.Class( () => {
+	return new Mod( Reflect.construct( ModScraperInterface, [] ) );
+} )
 export class Mod
 {
 	// -~= Properties =~-
 
 	// - Private
-	private	_data	: ModScraperInterface;
+	public	_data	: ModScraperInterface;
 
 	// - Protected
 
 
 	// - Public
+	public testString: string = "I'm a string";
+	public testNum: number = 42;
+	public testBool: boolean = true;
+	public testObj: object = {};
+
+	//@DireReflection.Member(Guid)
 	public readonly	guid	: Guid	= Guid.Create();
 	
 	public get data()
 	{
 		if ( this._data.ready === true ) return Promise.resolve( this._data );
 		return this._data.load();
+	}
+
+	public set data( val )
+	{
+
 	}
 	
 	// -~= Methods =~-
@@ -112,5 +119,8 @@ export class Mod
 		this._data.owner = this;
 	}
 
-
+	public ImAFunction( str: string )
+	{
+		
+	}
 }

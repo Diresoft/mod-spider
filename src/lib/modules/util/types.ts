@@ -10,10 +10,21 @@ export type NonFunctionPropertyNames<T> = {
 }[keyof T];
 export type NonFunctionProperties<T> = Pick<T, NonFunctionPropertyNames<T>>;
 
-export type Constructor<T = any> = abstract new(...args:[])=>T; // eslint-disable-line @typescript-eslint/no-explicit-any
-export class PrivateConstructorClass { private constructor() {} };
-export type Class = (Constructor | { prototype : PrivateConstructorClass, name : string} );
-export type DireInstanceType<T> = T extends abstract new(...args:unknown[])=>unknown ? InstanceType<T> : any;
+// Class Types
+abstract	class abstract_private_clazz	{ private	constructor( ...args: any[] ) {} }
+			class private_clazz				{ private	constructor( ...args: any[] ) {} }
+abstract	class abstract_protected_clazz	{ protected	constructor( ...args: any[] ) {} }
+			class protected_clazz			{ protected	constructor( ...args: any[] ) {} }
+abstract	class abstract_clazz			{			constructor( ...args: any[] ) {} }
+			class clazz						{			constructor( ...args: any[] ) {} }
+
+export type _abstract_private_ctor		= typeof abstract_private_clazz;
+export type _private_ctor				= typeof private_clazz;
+export type _abstract_protected_ctor	= typeof abstract_protected_clazz;
+export type _protected_ctor				= typeof protected_clazz;
+export type _abstract_ctor				= abstract new( ...args: any[] ) => any;
+export type _ctor						= new( ...args: any[] ) => any //typeof clazz;
 
 
+/** A promise which never resolves */ 
 export const FOREVER = new Promise<void>( () => {} );
