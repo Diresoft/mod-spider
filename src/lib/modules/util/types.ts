@@ -15,8 +15,6 @@ abstract	class abstract_private_clazz	{ private	constructor( ...args: any[] ) {}
 			class private_clazz				{ private	constructor( ...args: any[] ) {} }
 abstract	class abstract_protected_clazz	{ protected	constructor( ...args: any[] ) {} }
 			class protected_clazz			{ protected	constructor( ...args: any[] ) {} }
-abstract	class abstract_clazz			{			constructor( ...args: any[] ) {} }
-			class clazz						{			constructor( ...args: any[] ) {} }
 
 export type _abstract_private_ctor		= typeof abstract_private_clazz;
 export type _private_ctor				= typeof private_clazz;
@@ -25,6 +23,7 @@ export type _protected_ctor				= typeof protected_clazz;
 export type _abstract_ctor				= abstract new( ...args: any[] ) => any;
 export type _ctor						= new( ...args: any[] ) => any //typeof clazz;
 
+export type _ctor_any					= _ctor | _abstract_ctor | _protected_ctor | _abstract_protected_ctor | _abstract_private_ctor
 
 /** A promise which never resolves */ 
 export const FOREVER = new Promise<void>( () => {} );

@@ -1,5 +1,5 @@
 import type { _ctor, _protected_ctor } from '$lib/modules/util/types';
-import { Design, DireReflection } from './shared';
+import { Design, Reflection } from './reflection';
 
 export class Database
 {
@@ -10,7 +10,7 @@ export class Database
 
 	public static Manage<T extends _ctor>( base_class: T): typeof base_class
 	{
-		const meta = DireReflection.Reflect( base_class );
+		const meta = Reflection.Reflect( base_class );
 		console.log( `@Database.Manage: ${base_class.name}`, meta );
 		return class extends base_class
 		{
