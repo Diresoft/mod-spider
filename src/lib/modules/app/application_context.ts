@@ -1,6 +1,6 @@
 import { writable, type Writable } from "svelte/store";
-import { DoNotSerialize, JsonDeserialize, JsonSerialize, Serializable, type Dehydrated } from "../metaprogramming/serialization_decorators";
 import { Mod, NexusModData } from "../mod/Mod";
+import { Guid } from "../util/Guid";
 import { ModPlan } from "./project/ModPlan";
 
 
@@ -35,8 +35,9 @@ export const TEMP_ALL_MODS = [
 ];
 
 export class ModGroup {
-	public name: string = "Mod Group";
-	public description: string = "Short Description";
+	public readonly	guid: Guid				= Guid.Create();
+	public			name: string			= "Mod Group";
+	public			description: string		= "Short Description";
 
 	public subgroups: Array<ModGroup>;
 
@@ -49,7 +50,7 @@ export class ModGroup {
 }
 
 
-export const TEMP_MOD_GROUPS = [
+export const TEMP_MOD_GROUPS = new ModGroup( "root", "root", [
 	new ModGroup( "Core", "Mods considered required for any playthrough",
 	[
 		  new ModGroup( "Extenders", "Script and binary extensions" )
@@ -75,4 +76,4 @@ export const TEMP_MOD_GROUPS = [
 		, new ModGroup( "Towns", "Expansions or additional towns to fill out the world" )
 	] ),
 	new ModGroup( "Misc", "Mods that don't fit other categories" )
-]
+]);
