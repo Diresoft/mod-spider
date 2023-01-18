@@ -1,6 +1,6 @@
 import { Guid } from "../util/Guid";
 import { fetch, ResponseType } from '@tauri-apps/api/http';
-import { DireReflection } from "../meta/shared";
+import { Reflection } from "../meta/reflection";
 import { Database } from "../meta/database";
 
 export class ModTag
@@ -75,7 +75,7 @@ export class PatreonModData extends ModScraperInterface
 }
 
 @Database.Manage
-@DireReflection.Class( () => {
+@Reflection.Class( () => {
 	return new Mod( Reflect.construct( ModScraperInterface, [] ) );
 } )
 export class Mod

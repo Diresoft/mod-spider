@@ -1,10 +1,10 @@
 import { Database } from "../meta/database";
-import { DireReflection } from "../meta/shared";
+import { Reflection } from "../meta/reflection";
 
 const constellation : Map<string, Guid> = new Map();
 
 @Database.Manage_ProtectedType
-@DireReflection.Class()
+@Reflection.Class()
 export class Guid {
 	protected readonly value : string;
 
