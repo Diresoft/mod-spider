@@ -74,7 +74,7 @@ export class PatreonModData extends ModScraperInterface
 
 }
 
-@Database.Manage
+// @Database.Manage
 @Reflection.Class( () => {
 	return new Mod( Reflect.construct( ModScraperInterface, [] ) );
 } )
@@ -119,7 +119,7 @@ export class Mod
 		this._data.owner = this;
 	}
 
-	public ImAFunction( str: string )
+	public ImAFunction( str: string ): boolean
 	{
 		
 	}

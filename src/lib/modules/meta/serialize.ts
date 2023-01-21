@@ -1,14 +1,23 @@
 import type { _ctor, _private_ctor, _protected_ctor } from "../util/types";
+import { Reflection } from "./reflection";
 
-export function Serializable_PrivateClass<T extends _private_ctor>( class_constructor: T )
+export class Serializable
 {
-	return Serializable( class_constructor as unknown as _ctor );
-}
-export function Serializable_ProtectedClass<T extends _protected_ctor>( class_constructor: T )
-{
-	return Serializable( class_constructor as unknown as _ctor );
-}
-export function Serializable<T extends _ctor>( class_constructor: T )
-{
-	
+	public static Manage_ProtectedType<T extends _protected_ctor>( base_class: T)
+	{
+		return Serializable.Manage( base_class as unknown as _ctor ) as unknown as T; // Although this isn't type safe, the underlying JS will still work
+	}
+
+	public static Manage<T extends _ctor>( base_class: T): typeof base_class
+	{
+		const meta = Reflection.Get( base_class );
+		console.log( `@Serializable.Manage`, base_class, meta );
+		return class extends base_class
+		{
+		}
+	}
+
+	public static PrimaryKey<T extends _ctor>( target: InstanceType<T>, prop_key: string | symbol )
+	{
+	}
 }
