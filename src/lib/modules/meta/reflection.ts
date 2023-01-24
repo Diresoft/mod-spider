@@ -26,20 +26,29 @@ function MakeInstance<T>( generic: Constructor<T>, stub_constructor: StubConstru
 export namespace Reflection
 {
 	// Symbols
-	export const Metadata:		unique symbol = Symbol( "@Reflection:Metadata"		);
+	const Metadata:		unique symbol = Symbol( "@Reflection:Metadata"		);
 
 	// Types
-	export type Metadata<T> = {
+	export type ReflectionInfo<T> = {
 		ClassName:	string,
 		ClassType:	abstract new ( ...args: any[] ) => T,
 		Properties:	TypedPropertyFields<T>,
 		Methods:	TypedMethodFields<T>
 	}
+	type MetaPromise<T> = {
+		p: Promise<ReflectionInfo<T>>,
+		r: ( v: ReflectionInfo<T> | Promise<ReflectionInfo<T>> ) => void
+	}
 
-	export function Get<T extends object>( target: T ): Metadata<T>
+	export function Get<T extends object>( target: T ): Promise<ReflectionInfo<T>>
 	{
-		console.log( `Get meta for: ${target}`, target)
-		return Reflect.get( target, Metadata ) as Metadata<T>;
+		if ( !Reflect.has( target, Metadata ) )
+		{
+			let r : ( v: ReflectionInfo<T> | Promise<ReflectionInfo<T>> ) => void = () => {};
+			const p = new Promise( (res)=> { r = res } );
+			Reflect.set( target, Metadata, { p, r } )
+		}
+		return (Reflect.get( target, Metadata ) as MetaPromise<T>).p as Promise<ReflectionInfo<T>>;
 	}
 
 	// Decorators
@@ -47,7 +56,7 @@ export namespace Reflection
 	{
 		return function( target: Constructor<T> ): void
 		{
-			const metadata: Metadata<T> = {
+			const info: ReflectionInfo<T> = {
 				ClassName:	target.name,
 				ClassType:	target as new ( ...args: any[] ) => T,
 				Properties: {} as TypedPropertyFields<T>,
@@ -64,20 +73,20 @@ export namespace Reflection
 				
 				if ( introspection !== undefined )
 				{	// Type exists on instance only, must be a property
-					Reflect.set( metadata.Properties, member, introspection );
+					Reflect.set( info.Properties, member, introspection );
 				}
 				else if ( ( introspection = Reflect.getOwnPropertyDescriptor( target.prototype, member ) ) !== undefined )
 				{	// Type exists on prototype, must be function or accessor
 					if ( typeof introspection.value === 'function' )
 					{	// Descriptor is for a function
-						Reflect.set( metadata.Methods, member, {
+						Reflect.set( info.Methods, member, {
 							name:		member,
 							descriptor:	introspection
 						})
 					}
 					else
 					{	// Descriptor is for an accessor
-						Reflect.set( metadata.Properties, member, introspection );
+						Reflect.set( info.Properties, member, introspection );
 					}
 				}
 				else
@@ -86,8 +95,14 @@ export namespace Reflection
 				}
 			}
 
-			console.log( `Set meta on ${target.name}`, metadata, target.prototype);
-			Reflect.set( target.prototype, Metadata, metadata );
+			// Trigger or set the resolved promise for metadata
+			const prototype = target.prototype;
+			if ( Reflect.has( prototype, Metadata ) )
+			{
+				const { r } = Reflect.get( prototype, Metadata );
+				r( info );
+			}
+			Reflect.set( prototype, Metadata, { p: Promise.resolve( info ), r: undefined } ); // Replace the promise chain with a single resolved promise
 		}
 	}
 }

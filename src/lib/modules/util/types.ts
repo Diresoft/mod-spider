@@ -30,9 +30,7 @@ export type _ctor						= new( ...args: any[] ) => any //typeof clazz;
 
 export type _ctor_any					= _ctor | _abstract_ctor | _protected_ctor | _abstract_protected_ctor | _abstract_private_ctor
 
-
-export type Clazz<T> = { prototype: T }
-
+export type Class<T>		= abstract new ( ...args: any[] ) => T;
 export type Constructor<T> = Function & { prototype: T, name: string };
 
 
