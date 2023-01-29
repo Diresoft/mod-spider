@@ -2,6 +2,8 @@ import { Guid } from "../util/Guid";
 import { fetch, ResponseType } from '@tauri-apps/api/http';
 import { Reflection } from "../meta/reflection";
 import { Database } from "../meta/database";
+import { Serializable } from "../meta/serialize_DEPRECATED";
+import { Serialize } from "../meta/serialize";
 
 export class ModTag
 {
@@ -74,8 +76,8 @@ export class PatreonModData extends ModScraperInterface
 
 }
 
-// @Database.Manage
-@Reflection.Class( () => {
+@Database.Manage
+@Reflection.StubConstructor( () => {
 	return new Mod( Reflect.construct( ModScraperInterface, [] ) );
 } )
 export class Mod
@@ -83,24 +85,37 @@ export class Mod
 	// -~= Properties =~-
 
 	// - Private
-	public	_data	: ModScraperInterface;
+	// @Serialize.Ignore
+	// public	_data	: ModScraperInterface;
 
 	// - Protected
 
 
 	// - Public
+	@Serialize.Customize({
+		Ignore: false,
+		Transformer: {
+			out:	( val: string ) => `CUSTOMIZED: ${val}`,
+			in:		( val: string ) => /CUSTOMIZED: (.*)/.exec( val )?.[1] ?? "BAD PARSE"
+		}
+	})
 	public testString: string = "I'm a string";
+	
+	@Serialize.Customize( { Ignore: true } )
 	public testNum: number = 42;
+	
 	public testBool: boolean = true;
-	public testObj: object = {};
+	public testObj: object = {
+		foo: "bar"
+	};
 
-	//@DireReflection.Member(Guid)
+	@Database.PrimaryKey
 	public readonly	guid	: Guid	= Guid.Create();
 	
 	public get data()
 	{
-		if ( this._data.ready === true ) return Promise.resolve( this._data );
-		return this._data.load();
+		// if ( this._data.ready === true ) return Promise.resolve( this._data );
+		// return this._data.load();
 	}
 
 	public set data( val )
@@ -115,8 +130,8 @@ export class Mod
 	// - Constructor
 	constructor( data_source : ModScraperInterface )
 	{
-		this._data = data_source;
-		this._data.owner = this;
+		// this._data = data_source;
+		// this._data.owner = this;
 	}
 
 	public ImAFunction( str: string ): boolean
@@ -124,3 +139,10 @@ export class Mod
 		
 	}
 }
+
+
+const m1 = new Mod(	new NexusModData( "https://www.nexusmods.com/skyrimspecialedition/mods/72772" ) );
+const serialized = Serialize.toJSON( m1, true );
+console.log( `m1 as Json:\n${ serialized }` );
+// const parsed: Mod = Serialize.fromJSON( serialized );
+// console.log( `m1 parsed:`, parsed, m1 === parsed );

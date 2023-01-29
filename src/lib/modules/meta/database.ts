@@ -26,14 +26,18 @@ export namespace Database
 			return out;
 		}
 
-		where( key_value: any ): Set<InstanceType> | undefined
+		private _where( key_value: any ): Set<InstanceType> | undefined
 		{
 			return this.lut.get( key_value );
+		}
+		where( key_value: any ): Array<InstanceType>
+		{
+			return Array.from( this._where( key_value ) ?? [] );
 		}
 
 		put( key_value: any, instance: InstanceType )
 		{
-			let set = this.where( key_value );
+			let set = this._where( key_value );
 			if ( set === undefined ) {
 				set = new Set<InstanceType>();
 				this.lut.set( key_value, set );
@@ -44,14 +48,14 @@ export namespace Database
 
 		delete( key_value: any, instance: InstanceType )
 		{
-			let set = this.where( key_value );
+			let set = this._where( key_value );
 			if ( set === undefined ) return;
 			set.delete( instance );
 		}
 
 		has( key_value: any ): boolean
 		{
-			return this.lut.has( key_value ) && (this.lut.get( key_value ) as Set<InstanceType>).size > 0;
+			return this.lut.has( key_value ) && (this._where( key_value ) as Set<InstanceType>).size > 0;
 		}
 	}
 
@@ -133,10 +137,9 @@ export namespace Database
 	{
 		// Property decorators execute before this so all of that data is available here
 		const prototype = base_class.prototype;
-		console.log( `@Database::Manage`, prototype );
 
 		const pk_id = Reflect.get( prototype, PrimaryKeyIdentifierLookup	);
-		const keys	= Reflect.get( prototype, KeyIdentifierListLookup		);
+		const keys	= Reflect.get( prototype, KeyIdentifierListLookup		) ?? [];
 		const db = new TypeDatabase( base_class );
 		db.addPrimaryKey();
 		for ( const key of keys )
@@ -145,9 +148,10 @@ export namespace Database
 		}
 
 		Reflect.set( prototype, DatabaseSymbol, db );
+		const preserved_base = Reflection.PreserveMetadata( base_class as _ctor )
 
-		const AsClass = base_class as _ctor // Leave me alone Typescript. We're in a decorator, you have no power here!
-		return class extends AsClass {
+		// We mutate the class, so ensure we're preserving the metadata of the original
+		return class extends preserved_base {
 			constructor( ...args: any[] )
 			{
 				super( ...args );
@@ -172,15 +176,13 @@ export namespace Database
 						if ( p === pk_id )
 						{
 							db.byPrimaryKey().delete( curVal );
-							db.byPrimaryKey().put( v, t );
+							db.byPrimaryKey().put( v, proxy );
 						}
 						else
 						{
-							db.byKey( p ).delete( curVal, t );
-							db.byKey( p ).put( v, t );
+							db.byKey( p ).delete( curVal, proxy );
+							db.byKey( p ).put( v, proxy );
 						}
-
-						console.log( db );
 
 						return Reflect.set( t, p, v, r );
 					}
