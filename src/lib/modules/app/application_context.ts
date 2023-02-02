@@ -1,4 +1,5 @@
 import { writable, type Writable } from "svelte/store";
+import { Database } from "../meta/database";
 import { Serialize } from "../meta/serialize";
 import { Mod, NexusModData } from "../mod/Mod";
 import { Guid } from "../util/Guid";
@@ -79,3 +80,47 @@ export const TEMP_MOD_GROUPS = new ModGroup( "root", "root", [
 	new ModGroup( "Misc", "Mods that don't fit other categories" )
 ]);
 
+@Serialize.Manage()
+@Database.Manage
+class Test {
+	@Serialize.ConfigureProperty({
+		Transform: {
+			out:	( val: string ) => `CUSTOMIZED: ${val}`,
+			in:		( val: string ) => `BOOO`
+		}
+	})
+	public testString: string = "I'm a string";
+	
+	@Serialize.ConfigureProperty( { Ignored: true } )
+	public testNum: number = 42;
+	
+	public testBool: boolean = true;
+	public testObj: object = {
+		foo: "bar"
+	};
+
+	@Database.PrimaryKey
+	public testGuid: Guid = Guid.Create();
+
+	public ImAFunction( str: string ): boolean
+	{
+		
+	}
+	constructor( )
+	{}
+}
+
+// const g = Guid.Create();
+// const gs = Serialize.toJSON( g, true );
+// console.log( `g as Json:\n${ gs }` );
+
+const a = new Test();
+a.testString = "Foo Bar Foo";
+a.testNum = -42;
+a.testBool = false;
+a.testObj = { foo: "biz" };
+
+const as = Serialize.toJSON( a, true );
+console.log( `a as Json:\n${ as }` );
+const parsed: Test = Serialize.fromJSON( as );
+console.log( `a parsed:`, parsed, a === parsed, a.testGuid === parsed.testGuid );

@@ -95,11 +95,11 @@ export namespace Database
 		private readonly type: Constructor<InstanceType>;
 		private indexes: Map<string|symbol, PrimaryKeyIndex<InstanceType> | Index<InstanceType>> = new Map();
 		
-		byKey( key_identifier: string|symbol ): Index<InstanceType>
+		byKey( key_identifier: string|symbol ): undefined|Index<InstanceType>
 		{
 			if ( key_identifier === this.pk ) throw new Error(`${key_identifier.toString()} is a primary key. Use \`byPrimaryKey\` instead` );
 
-			if ( !this.indexes.has(key_identifier) ) throw new DatabaseConfigurationError( `Type<${this.type.name}> had no index for key: ${key_identifier.toString()}` );
+			if ( !this.indexes.has(key_identifier) ) return undefined;// throw new DatabaseConfigurationError( `Type<${this.type.name}> had no index for key: ${key_identifier.toString()}` );
 			return this.indexes.get( key_identifier ) as Index<InstanceType>;
 		}
 
@@ -175,13 +175,13 @@ export namespace Database
 						
 						if ( p === pk_id )
 						{
-							db.byPrimaryKey().delete( curVal );
-							db.byPrimaryKey().put( v, proxy );
+							db.byPrimaryKey()?.delete( curVal );
+							db.byPrimaryKey()?.put( v, proxy );
 						}
 						else
 						{
-							db.byKey( p ).delete( curVal, proxy );
-							db.byKey( p ).put( v, proxy );
+							db.byKey( p )?.delete( curVal, proxy );
+							db.byKey( p )?.put( v, proxy );
 						}
 
 						return Reflect.set( t, p, v, r );
@@ -216,7 +216,7 @@ export namespace Database
 		}
 	}
 
-	export function PrimaryKey<T extends object>( target: T, prop: string|symbol )
+	export function PrimaryKey( target: any, prop: string|symbol )
 	{
 		Reflect.set( target, PrimaryKeyIdentifierLookup, prop );
 	}
