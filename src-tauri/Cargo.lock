@@ -570,7 +570,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "diresoft_mod_master"
+name = "diresoft_mod_spider"
 version = "0.1.0"
 dependencies = [
  "serde",

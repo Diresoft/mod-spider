@@ -1,11 +1,11 @@
 [package]
-name = "diresoft_mod_master"
+name = "diresoft_mod_spider"
 version = "0.1.0"
 description = "An app for mod planning"
 authors = []
 license = ""
 repository = ""
-default-run = "diresoft_mod_master"
+default-run = "diresoft_mod_spider"
 edition = "2021"
 rust-version = "1.57"
 

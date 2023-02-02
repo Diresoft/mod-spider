@@ -7,8 +7,8 @@
     "distDir": "../build"
   },
   "package": {
-    "productName": "modding-master",
-    "version": "0.1.0"
+    "productName": "mod-spider",
+    "version": "0.0.1"
   },
   "tauri": {
     "allowlist": {
@@ -37,7 +37,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.diresoft.modding-master",
+      "identifier": "com.diresoft.mod-spider",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
@@ -69,7 +69,7 @@
         "resizable":		true,
 		"minWidth":			1200,
 		"minHeight":		720,
-        "title":			"Modding Master",
+        "title":			"Mod Spider",
 		"fileDropEnabled":	false
       }
     ]
