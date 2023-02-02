@@ -1,5 +1,6 @@
 import type { Mod } from "../mod/Mod";
 import type { Constructor, NonFunctionProperties } from "../util/types";
+import { Database } from "./database";
 import { Reflection } from "./reflection";
 
 export class SerializeConfigurationError extends Error {}
@@ -195,9 +196,27 @@ export namespace Serialize
 			}
 		} );
 
-		if ( info.TypeHydrator === null ) throw new SerializeConfigurationError( `Type \`${meta.DesignInfo.Identifier}\` had an invalid serialization configuration at deserialization time! Type Hydrator was null` );
-		const instance = info.TypeHydrator( wrapped_value ) as T;
+		let instance: null|T = null;
+		// Before we try and create a new instance, check if this type is tracked in the runtime database and try and get it from there
+		// Note: This provides cross module knowledge which I'd like to avoid, but we need to execute the constructor for the database
+		//       lookup to happen, which means that any primary keys will have default or stub constructed values still when it runs.
+		//       If the user provides a Type Hydrator which _does_ call a constructor that sets the PK, it'll work correctly. However
+		//       for our default Type Hydrator we have no way of assigning the PK before invoking a constructor.
+		if ( Database.isTypeManaged( meta.ClassType ) )
+		{
+			const type_database = Database.get( meta.ClassType );
+			const pk_id			= type_database.primary_key_identifier
+			const pk_val		= wrapped_value[pk_id];
+
+			instance = type_database.byPrimaryKey().where( pk_val );
+		}
 		
+		if( instance === null || instance === undefined )
+		{
+			if ( info.TypeHydrator === null ) throw new SerializeConfigurationError( `Type \`${meta.DesignInfo.Identifier}\` had an invalid serialization configuration at deserialization time! Type Hydrator was null` );
+			instance = info.TypeHydrator( wrapped_value ) as T;
+		}
+
 		if ( info.Hydrator !== null ) info.Hydrator.call( instance, wrapped_value );
 
 		return instance;

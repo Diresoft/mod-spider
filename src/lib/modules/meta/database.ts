@@ -91,13 +91,14 @@ export namespace Database
 
 	export class TypeDatabase<InstanceType extends object>
 	{
-		private readonly pk: string|symbol;
 		private readonly type: Constructor<InstanceType>;
 		private indexes: Map<string|symbol, PrimaryKeyIndex<InstanceType> | Index<InstanceType>> = new Map();
+
+		public readonly primary_key_identifier: string|symbol;
 		
 		byKey( key_identifier: string|symbol ): undefined|Index<InstanceType>
 		{
-			if ( key_identifier === this.pk ) throw new Error(`${key_identifier.toString()} is a primary key. Use \`byPrimaryKey\` instead` );
+			if ( key_identifier === this.primary_key_identifier ) throw new Error(`${key_identifier.toString()} is a primary key. Use \`byPrimaryKey\` instead` );
 
 			if ( !this.indexes.has(key_identifier) ) return undefined;// throw new DatabaseConfigurationError( `Type<${this.type.name}> had no index for key: ${key_identifier.toString()}` );
 			return this.indexes.get( key_identifier ) as Index<InstanceType>;
@@ -105,14 +106,14 @@ export namespace Database
 
 		byPrimaryKey(): PrimaryKeyIndex<InstanceType>
 		{
-			if ( this.pk === undefined || !this.indexes.has( this.pk ) ) throw new DatabaseConfigurationError( `Type<${this.type.name}> had no index for it's primary key: ${this.pk.toString()}` );
-			return this.indexes.get( this.pk ) as PrimaryKeyIndex<InstanceType>;
+			if ( this.primary_key_identifier === undefined || !this.indexes.has( this.primary_key_identifier ) ) throw new DatabaseConfigurationError( `Type<${this.type.name}> had no index for it's primary key: ${this.primary_key_identifier.toString()}` );
+			return this.indexes.get( this.primary_key_identifier ) as PrimaryKeyIndex<InstanceType>;
 		}
 
 		addPrimaryKey()
 		{
-			if ( this.indexes.has( this.pk ) ) return; // Nothing to add if it's already added
-			this.indexes.set( this.pk, new PrimaryKeyIndex<InstanceType>() );
+			if ( this.indexes.has( this.primary_key_identifier ) ) return; // Nothing to add if it's already added
+			this.indexes.set( this.primary_key_identifier, new PrimaryKeyIndex<InstanceType>() );
 		}
 
 		addKey( key_identifier: string|symbol )
@@ -124,7 +125,7 @@ export namespace Database
 		constructor( type: Constructor<InstanceType> )
 		{
 			this.type	= type;
-			this.pk		= Reflect.get( this.type.prototype, PrimaryKeyIdentifierLookup, this.type.prototype );
+			this.primary_key_identifier		= Reflect.get( this.type.prototype, PrimaryKeyIdentifierLookup, this.type.prototype );
 		}
 	}
 
@@ -132,6 +133,12 @@ export namespace Database
 	const KeyIdentifierListLookup:		unique symbol = Symbol( "@Database::KeyIdentifierList" );
 	const PrimaryKeyIdentifierLookup:	unique symbol = Symbol( "@Database::PrimaryKeyIdentifier" );
 	const DatabaseSymbol:				unique symbol = Symbol( "@Database::DatabaseSymbol" );
+
+	export function isTypeManaged<T extends object>( class_type: Constructor<T>): boolean
+	{
+		const prototype: T = class_type.prototype;
+		return Reflect.has( prototype, DatabaseSymbol )
+	}
 
 	export function Manage<T extends any>( base_class: Constructor<T> ): any
 	{
@@ -155,6 +162,8 @@ export namespace Database
 			constructor( ...args: any[] )
 			{
 				super( ...args );
+
+				//console.log( `Database.Manage: Constructing`, this, new Error() );
 
 				// If this primary key is already in use, return that instance instead
 				const pk_val = Reflect.get( this, pk_id );
@@ -198,7 +207,7 @@ export namespace Database
 				for( const key of keys )
 				{
 					const key_value = Reflect.get( proxy, key, proxy );
-					db.byKey( key ).put( key_value, proxy );
+					db.byKey( key )?.put( key_value, proxy );
 				}
 
 				return proxy;
