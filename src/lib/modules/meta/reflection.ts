@@ -6,25 +6,22 @@ import type { Constructor } from "../util/types";
 
 type StubConstructor<T> = () => T;
 
-export class ReflectionMissingStubConstructorError extends Error {};
-export class ReflectionError extends Error { }
-
-function MakeInstance<T>( generic: Constructor<T>, stub_constructor: StubConstructor<T> | null = null ): T
+export class ReflectionFailedToInstantiateError extends Error
 {
-	try
+	constructor( type_name: string, stub_constructor: Function|null, base_error: Error )
 	{
-		return Reflect.construct( generic, [] );
-	}
-	catch( e )
-	{
-		if ( stub_constructor === null ) {
-			throw new ReflectionMissingStubConstructorError(
-				`Unable to instantiate a \`${ generic.name }\`. No stub constructor available for this type.`
-			);
+		const bHadStubConstructor = stub_constructor !== null;
+		let message = `Reflection failed to instantiate \`${type_name}\`.`;
+		if ( stub_constructor === null )
+		{
+			message += ` No stub constructor was provided as an alternative!`;
 		}
-		return stub_constructor();
+		message += `\nReason: ${base_error.message}`
+		super( message, { cause: base_error } );
+		this.stack = `${base_error.stack?.split( '\n' ) [1]}\n${this.stack}`
 	}
-}
+};
+export class ReflectionError extends Error { }
 
 export namespace Reflection
 {
@@ -52,17 +49,32 @@ export namespace Reflection
 
 		constructor( prototype: InstanceType<T>, stub_constructor: null | ( () => InstanceType<T> ) )
 		{
-			this.ClassType			= prototype as new (...args: any[] ) => InstanceType<T>;
+			this.ClassType			= prototype.constructor;
 			this.StubConstructor	= stub_constructor;
 			this.Properties			= {} as any; // We're about to fill this out
 			this.DesignInfo			= {
 				Identifier:	prototype.constructor.name
 			}
 
-			const instance: InstanceType<T> = MakeInstance( prototype, this.StubConstructor ); // Properties only exist on instances
+			let instance: InstanceType<T> ;
+			try
+			{
+				instance = Reflect.construct( prototype.constructor, [] );
+			}
+			catch( e ) {
+				if ( stub_constructor !== null )
+				{
+					instance = stub_constructor();
+				}
+				else
+				{
+					throw new ReflectionFailedToInstantiateError( prototype.constructor.name, stub_constructor, e as Error );
+				}
+			}
 
 			// Inspect members of the prototype and instance to determine all fields and properties.
-			const members = Reflect.ownKeys( instance ).concat( Reflect.ownKeys( prototype ) );
+			const members = Reflect.ownKeys( prototype ).concat( Reflect.ownKeys( instance ) );
+
 			for ( const member of members )
 			{
 				if ( member === 'constructor' ) continue; // Already have the ctor, it's the decorator parameter
@@ -112,7 +124,8 @@ export namespace Reflection
 		const	stub_constructor	= Reflect.get( prototype, StubConstructorSymbol	) as undefined | (() => InstanceType<T>);
 		let		cur_mirror			= Reflect.get( prototype, MetadataSymbol		) as undefined | Mirror<T>;
 
-		if ( cur_mirror === undefined ) {
+		if ( cur_mirror === undefined )
+		{
 			cur_mirror = new Mirror( prototype, stub_constructor ?? null );
 			Reflect.set( prototype, MetadataSymbol, cur_mirror );
 
