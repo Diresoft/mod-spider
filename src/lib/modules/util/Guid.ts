@@ -1,7 +1,7 @@
 import { Database } from "../meta/database";
 import { Reflection } from "../meta/reflection";
 import { Serialize } from "../meta/serialize";
-import type { _protected_ctor } from "./types";
+import type { PrototypeOf, _protected_ctor } from "./types";
 
 @Serialize.Manage(
 	{

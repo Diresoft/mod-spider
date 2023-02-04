@@ -75,17 +75,18 @@ export class PatreonModData extends ModScraperInterface
 
 }
 
+@Serialize.Manage()
 @Database.Manage
 @Reflection.StubConstructor( () => {
-	return new Mod( Reflect.construct( ModScraperInterface, [] ) );
+	return new Mod( { owner: null } as unknown as ModScraperInterface );
 } )
 export class Mod
 {
 	// -~= Properties =~-
 
 	// - Private
-	// @Serialize.Ignore
-	// public	_data	: ModScraperInterface;
+	@Serialize.ConfigureProperty( { Ignored: true } )
+	public	_data	: ModScraperInterface;
 
 	// - Protected
 
@@ -97,13 +98,8 @@ export class Mod
 	
 	public get data()
 	{
-		// if ( this._data.ready === true ) return Promise.resolve( this._data );
-		// return this._data.load();
-	}
-
-	public set data( val )
-	{
-
+		if ( this._data.ready === true ) return Promise.resolve( this._data );
+		return this._data.load();
 	}
 	
 	// -~= Methods =~-
@@ -113,14 +109,7 @@ export class Mod
 	// - Constructor
 	constructor( data_source : ModScraperInterface )
 	{
-		// this._data = data_source;
-		// this._data.owner = this;
+		this._data = data_source;
+		this._data.owner = this;
 	}
 }
-
-
-// const m1 = new Mod(	new NexusModData( "https://www.nexusmods.com/skyrimspecialedition/mods/72772" ) );
-// const serialized = Serialize.toJSON( m1, true );
-// console.log( `m1 as Json:\n${ serialized }` );
-// const parsed: Mod = Serialize.fromJSON( serialized );
-// console.log( `m1 parsed:`, parsed, m1 === parsed );

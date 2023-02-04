@@ -1,5 +1,5 @@
 import type { Mod } from "../mod/Mod";
-import type { Constructor, NonFunctionProperties } from "../util/types";
+import type { Constructor, PrototypeOf } from "../util/types";
 import { Database } from "./database";
 import { Reflection } from "./reflection";
 
@@ -50,11 +50,11 @@ export namespace Serialize
 		return mirror;
 	}
 
-	export function Get<T extends object>( prototype: T ): SerializationInfo<T>
+	export function Get<T extends object>( prototype: PrototypeOf<T> ): SerializationInfo<T>
 	{
-		const meta = Reflection.Get( prototype );
-		const info = Reflect.get( prototype, SerializationInfoSymbol ) as SerializationInfo<T> ?? new SerializationInfo<T>;
-		name_to_info_lut.set( meta.DesignInfo.Identifier, info );
+		const mirror	= Reflection.Get( prototype );
+		const info		= Reflect.get( prototype, SerializationInfoSymbol ) as SerializationInfo<T> ?? new SerializationInfo<T>;
+		name_to_info_lut.set( mirror.DesignInfo.Identifier, info );
 		Reflect.set( prototype, SerializationInfoSymbol, info );
 
 		return info;
@@ -66,40 +66,14 @@ export namespace Serialize
 	{
 		return function( target: Constructor<T> )
 		{
-			const meta			= Reflection.Get( target.prototype );
+			const meta			= Reflection.Get<T>( target.prototype );
 			const base_toJSON	= target.prototype.toJSON ?? function ( this: T ){ return this; };
-			const info			= Get( target.prototype );
+			const info			= Get<T>( target.prototype );
 
 			if ( !options || options.TypeHydrator === undefined )
 			{	// User doesn't define a choice, use default
 				info.TypeHydrator = ( _: any ): T => {
-					try
-					{
-						// Try the regular constructor with zero args, as we'll rely on the data hydrator to fill out the data
-						return Reflect.construct( meta.ClassType, [] );
-					}
-					catch( e: any )
-					{
-						// Regular constructor failed, try with a stub constructor
-						if ( meta.StubConstructor === null ) throw new SerializationError(
-							`Unable to deserialize object annotated as \`${meta.DesignInfo.Identifier}\`\nReason: ${(e as Error).message}\n No stub constructor was provided`,
-							e as Error
-						)
-						else
-						{
-							try 
-							{
-								return meta.StubConstructor();
-							}
-							catch ( e )
-							{	// Stub constructor failed!
-								throw new SerializationError(
-									`Unable to deserialize object annotated as \`${meta.DesignInfo.Identifier}\`\nStub constructor failed\nReason:${(e as Error).message}`,
-									e as Error
-								)
-							}
-						}
-					}
+					return Reflection.MakeInstance<T>( meta.ClassType, meta.StubConstructor );
 				};
 			}
 			else if ( options && options.TypeHydrator !== null && typeof options.TypeHydrator === 'function' )
@@ -139,18 +113,20 @@ export namespace Serialize
 		}
 	}
 	
-	export function ConfigureProperty( options: any )
+	export function ConfigureProperty<T extends object>( options: any )
 	{
-		return function<T extends object>( target: T, prop: keyof T )
-		{			
-			const info = Get( target );
-			info.Properties[ prop ] = Object.assign( info.Properties[ prop ] ?? {}, options );
+		return function( target: T, property_identifier: string|symbol )
+		{
+			const prototype = target as PrototypeOf<T>;
+			const prop_key	= property_identifier as keyof T;
+			const info = Get( prototype );
+			info.Properties[ prop_key ] = Object.assign( info.Properties[ prop_key ] ?? {}, options );
 		}
 	}
 
 	// SERIALIZERS
 
-	function replacer<T extends object>( this: T, key: keyof T, value: any ): any
+	function replacer<T extends object>( this: PrototypeOf<T>, key: keyof T, value: any ): any
 	{
 		// @ts-ignore - replacer has a mutating this type which is incompatible when it's the root.
 		if( this[""] !== undefined ) return value; // Accept the step into
@@ -183,8 +159,8 @@ export namespace Serialize
 			return value;
 		}
 		
-		const meta			= Reflection.GetByName( value._type );
-		const info			= GetByName( value._type );
+		const meta			= Reflection.GetByName<T>( value._type );
+		const info			= GetByName<T>( value._type );
 		const wrapped_value = typeof value._value !== 'object' ? value._value : new Proxy( value._value, {
 			// Intercept the getter so we can reverse transform, as well as ensure any ignored props remain ignored.
 			get: ( t: any, p: string | symbol, r: any ) =>
@@ -204,11 +180,11 @@ export namespace Serialize
 		//       for our default Type Hydrator we have no way of assigning the PK before invoking a constructor.
 		if ( Database.isTypeManaged( meta.ClassType ) )
 		{
-			const type_database = Database.get( meta.ClassType );
+			const type_database = Database.get<T>( meta.ClassType );
 			const pk_id			= type_database.primary_key_identifier
 			const pk_val		= wrapped_value[pk_id];
 
-			instance = type_database.byPrimaryKey().where( pk_val );
+			instance = type_database.byPrimaryKey().where( pk_val ) ?? null;
 		}
 		
 		if( instance === null || instance === undefined )

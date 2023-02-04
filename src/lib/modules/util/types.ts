@@ -3,6 +3,9 @@
  * Mostly utility, providing features/abilities that aren't part of the core TypeScript language
  */
 
+import { Mod, NexusModData } from "../mod/Mod";
+import { Guid } from "./Guid";
+
 
 // Non function properties types, from: https://stackoverflow.com/questions/55479658/how-to-create-a-type-excluding-instance-methods-from-a-class-in-typescript
 export type NonFunctionPropertyNames<T> = {
@@ -30,10 +33,18 @@ export type _ctor						= new( ...args: any[] ) => any //typeof clazz;
 
 export type _ctor_any					= _ctor | _abstract_ctor | _protected_ctor | _abstract_protected_ctor | _abstract_private_ctor
 
+type _auto_ctor<T> = T extends abstract new( ...args: any[] ) => any
+? abstract new( ...args: any[] ) => InstanceType<T> & { prototype: InstanceType<T> }
+: T extends { constructor: infer R }
+	? R & { prototype: InstanceType<any> }
+	: Function & { prototype: InstanceType<any> };
+
 export type Class<T>		= abstract new ( ...args: any[] ) => T;
-export type Constructor<T> = Function & { prototype: T, name: string };
+export type Constructor<T> = ( abstract new( ...args:any[] )=>T ) | _auto_ctor<T>;
+export type PrototypeOf<T>	= FunctionProperties<T> & { constructor: abstract new (...args: any[] ) => T }
 
-
+// Ripped from svelte's code
+export type __Expand<T> = T extends infer O ? { [K in keyof O]: O[K] } : never;
 
 export type TypedFunctionDescriptor<T, P> =
 	T extends ( ...args: any[] ) => any
