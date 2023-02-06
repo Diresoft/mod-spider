@@ -8,9 +8,3 @@
 </style>
 
 <h1>No Group Selected</h1>
-<Foldout>
-	<h2>Content</h2>
-</Foldout>
-<Foldout>
-	<h2>Content</h2>
-</Foldout>

@@ -1,9 +1,27 @@
 <script lang="ts">
 	import PushBreadcrumb from '$lib/components/Breadcrumbs/PushBreadcrumb.svelte';
-	import { MultiWindowDragBridge } from '$lib/modules/app/MultiWindowDrag';
-	import { TEMP_MOD_GROUPS } from '$lib/modules/app/application_context';
-	import { appWindow } from '@tauri-apps/api/window';
 	import ModGroupEntry from '$lib/components/planning/ModGroupEntry.svelte';
+
+
+	import { ModGroup, TEMP_MOD_GROUPS } from '$lib/modules/app/application_context';
+
+	function onModGroupMoved( event: CustomEvent<{ source: ModGroup, target: ModGroup }> )
+	{
+		const { source, target } = event.detail;
+		source.parent?.subgroups.update( ( v ) => v.filter( (val) => val !== source ) );
+		source.parent = target;
+		target.subgroups.update( (v) => {
+			v.push( source );
+			return v;
+		})
+	}
+
+
+	let subgroups: ModGroup[] = [];
+	TEMP_MOD_GROUPS.subgroups.subscribe( (v: ModGroup[]) => {
+		subgroups = v;
+	})
+	
 </script>
 <PushBreadcrumb href="./plan" text="Plan" icon='rebase_edit' postfix_icon />
 
@@ -13,8 +31,8 @@
 			The major mod groups, each group contains multiple mods. This view should be re-arrangeable with drag and drop. 
 			The list should be hierarchical, allowing for the creation of subgroups that move with the parent group
 		-->
-		{#each TEMP_MOD_GROUPS.subgroups as group, i}
-			<ModGroupEntry group={group} expanded/>
+		{#each subgroups as group, i}
+			<ModGroupEntry group={group} expanded on:groupMoved={onModGroupMoved}/>
 		{/each}
 	
 	</article>

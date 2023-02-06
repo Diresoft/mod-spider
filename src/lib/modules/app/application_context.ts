@@ -40,19 +40,25 @@ export class ModGroup {
 	public readonly	guid: Guid				= Guid.Create();
 	public			name: string			= "Mod Group";
 	public			description: string		= "Short Description";
+	public			parent: ModGroup|null	= null;
+	
+	public subgroups: Writable< ModGroup[] >;
 
-	public subgroups: Array<ModGroup>;
-
-	constructor( name: string, description: string, subgroups: Array<ModGroup> = [] )
+	constructor( name: string, description: string, subgroups: ModGroup[] = [] )
 	{
 		this.name			= name;
 		this.description	= description;
-		this.subgroups		= subgroups;
+		this.subgroups		= writable(subgroups);
+
+		// Mark this as the parent in the subgroups
+		for( const subgroup of subgroups )
+		{
+			subgroup.parent = this;
+		}
 	}
 }
 
-
-export const TEMP_MOD_GROUPS = new ModGroup( "root", "root", [
+const _mod_groups_temp = new ModGroup( "root", "root", [
 	new ModGroup( "Core", "Mods considered required for any playthrough",
 	[
 		  new ModGroup( "Extenders", "Script and binary extensions" )
@@ -79,3 +85,5 @@ export const TEMP_MOD_GROUPS = new ModGroup( "root", "root", [
 	] ),
 	new ModGroup( "Misc", "Mods that don't fit other categories" )
 ]);
+
+export const TEMP_MOD_GROUPS = _mod_groups_temp

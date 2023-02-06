@@ -4,27 +4,45 @@
 </script>
 <script lang="ts">
 	import type { ModGroup } from "$lib/modules/app/application_context";
-	import { onMount } from "svelte";
+
+	import { createEventDispatcher, onMount } from "svelte";
 	import { quintOut } from "svelte/easing";
 	import { slide } from "svelte/transition";
 	import { writable, type Writable } from "svelte/store";
 
-	export let group: ModGroup;
-	export let expanded: boolean = false;
-	const isHovered: Writable<boolean>	= writable( false );
+	const dispatch = createEventDispatcher();
+
+
+	export let group:		ModGroup;
+	export let expanded:	boolean = false; // Initial state
+
+	const isHovered:	 Writable<boolean>	= writable( false );
+	let expandable:		 boolean			= false;
+	let subgroups:		 ModGroup[]			= [];
+	let subgroup_length: number				= Number.MAX_VALUE;
+
+	group.subgroups.subscribe( (v: ModGroup[]) => {
+		subgroups = v;
+
+		const didGrow = subgroups.length > subgroup_length;
+		subgroup_length = subgroups.length;
+
+		expandable	= subgroup_length > 0;
+		expanded	= (expanded || didGrow ) && expandable;
+	});
+
+	onMount( () => {
+
+	})
 
 	function doExpand()
 	{
-		if ( group.subgroups.length > 0 )
+		if ( subgroups.length > 0 )
 		{
 			expanded = !expanded;
 		}
 	}
-
-	onMount(()=>{
-		expanded = expanded && group.subgroups.length > 0; // Can only be expanded if we have subgroups
-	});
-
+	
 	function getTargetIfDropTarget( e: DragEvent ): HTMLElement | false
 	{
 		const target: HTMLElement | null = e.target as HTMLElement | null;
@@ -34,16 +52,6 @@
 		if ( inFlightSrcElement === target )	return false; // Ignore self
 
 		return target;
-	}
-
-	function getParentInfoElement( el: HTMLElement ): HTMLElement | null
-	{
-		let parent = el.parentElement;
-		while( parent !== null && parent.tagName !== "INFO" )
-		{
-			parent = parent.parentElement;
-		}
-		return parent;
 	}
 
 	function dragover( e: DragEvent )
@@ -67,11 +75,8 @@
 			return;
 		};
 		isHovered.set( true );
-
-		// const info = getParentInfoElement( target );
-		// if ( !info ) throw new Error( `Couldn't find an <info> element in the parent hierarchy` );
-		// info.classList.add( 'drag-hover' );
 	}
+
 	function dragleave( e: DragEvent )
 	{
 		const target = getTargetIfDropTarget( e );
@@ -79,17 +84,17 @@
 			return;
 		};
 		isHovered.set( false );
-
-		// const info = getParentInfoElement( target );
-		// if ( !info ) throw new Error( `Couldn't find an <info> element in the parent hierarchy` );
-		// info.classList.remove( 'drag-hover' );
 	}
+
 	function drop( groupDroppedOn: ModGroup, e: DragEvent )
 	{
 		e.preventDefault();
 		isHovered.set( false );
 
-		console.log( `Move: ${inFlight?.name} after ${groupDroppedOn.name}` );
+		dispatch( 'groupMoved', {
+			source:	inFlight,
+			target:	groupDroppedOn
+		})
 	}
 
 </script>
@@ -207,7 +212,7 @@ group {
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <info
-	class:expandable={group.subgroups.length > 0}
+	class:expandable
 	class:expanded
 	class:hovered={$isHovered}
 	on:click={doExpand}
@@ -229,12 +234,12 @@ group {
 	<description>{group.description}</description>
 </info>
 <group>
-	{#if expanded && group.subgroups.length > 0 }
+	{#if expanded }
 		<div
 			transition:slide={{duration: 300, easing:quintOut}}
 		>
-			{#each group.subgroups as subgroup}
-				<svelte:self group={subgroup} />
+			{#each subgroups as subgroup}
+				<svelte:self on:groupMoved group={subgroup} />
 			{/each}
 		</div>
 	{/if}
