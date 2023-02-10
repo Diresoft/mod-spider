@@ -42,13 +42,13 @@ export class ModGroup {
 	public			description: string		= "Short Description";
 	public			parent: ModGroup|null	= null;
 	
-	public subgroups: Writable< ModGroup[] >;
+	public subgroups: ModGroup[];
 
 	constructor( name: string, description: string, subgroups: ModGroup[] = [] )
 	{
 		this.name			= name;
 		this.description	= description;
-		this.subgroups		= writable(subgroups);
+		this.subgroups		= subgroups;
 
 		// Mark this as the parent in the subgroups
 		for( const subgroup of subgroups )
