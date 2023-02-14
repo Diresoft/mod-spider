@@ -5,7 +5,7 @@ import { Serialize } from "../meta/serialize";
 @Serialize.Manage()
 export class AppContext
 {
-	@Serialize.ConfigureProperty({ })
+	@Serialize.ConfigureProperty( { Ignored: true } )
 	public crumbs : Writable< Array< {text:null|string, href:string, icon:undefined|string, postfix_icon:boolean} > > = writable([]);
 }
 export const app = new AppContext();

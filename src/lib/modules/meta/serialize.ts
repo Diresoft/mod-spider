@@ -115,14 +115,14 @@ export namespace Serialize // eslint-disable-line @typescript-eslint/no-namespac
 		}
 	}
 	
-	export function ConfigureProperty<T extends object>( options: any )
+	export function ConfigureProperty<T extends object>( options: Partial<PropertySerializationOptions<any>> )
 	{
 		return function( target: T, property_identifier: string|symbol )
 		{
 			const prototype = target as PrototypeOf<T>;
 			const prop_key	= property_identifier as keyof T;
 			const info = Get( prototype );
-			info.Properties[ prop_key ] = Object.assign( info.Properties[ prop_key ] ?? {}, options );
+			info.Properties[ prop_key ] = Object.assign( info.Properties[ prop_key ] ?? {}, options ) as PropertySerializationOptions<any>;
 		}
 	}
 
