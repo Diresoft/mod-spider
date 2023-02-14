@@ -1,6 +1,6 @@
-import { app } from "../app/application_context";
+import { app } from "../application_context";
 import { DoNotSerialize, Serializable } from "../metaprogramming/serialization_decorators";
-import { Guid } from "../util/Guid";
+import { Guid } from "../../util/Guid";
 import type { Mod } from "./Mod";
 
 export enum ModLinkType {

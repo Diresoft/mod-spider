@@ -3,7 +3,7 @@
  * Mostly utility, providing features/abilities that aren't part of the core TypeScript language
  */
 
-import { Mod, NexusModData } from "../mod/Mod";
+import { Mod, NexusModData } from "../app/mod/Mod";
 import { Guid } from "./Guid";
 
 

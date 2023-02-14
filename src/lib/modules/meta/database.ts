@@ -1,7 +1,7 @@
 import type { Class, Constructor, _ctor } from "../util/types";
 import { Reflection } from "./reflection";
 
-export namespace Database
+export namespace Database // eslint-disable-line @typescript-eslint/no-namespace
 {
 	export class DatabaseError extends Error { }
 	export class DatabaseConfigurationError extends Error { }
@@ -48,7 +48,7 @@ export namespace Database
 
 		delete( key_value: any, instance: InstanceType )
 		{
-			let set = this._where( key_value );
+			const set = this._where( key_value );
 			if ( set === undefined ) return;
 			set.delete( instance );
 		}
@@ -75,6 +75,7 @@ export namespace Database
 
 		put( key_value: any, instance: InstanceType )
 		{
+			console.log( `PrimaryKeyIndex.put`, this, key_value, instance );
 			this.lut.set( key_value, instance );
 		}
 

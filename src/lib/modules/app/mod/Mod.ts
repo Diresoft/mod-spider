@@ -1,8 +1,8 @@
-import { Guid } from "../util/Guid";
+import { Guid } from "../../util/Guid";
 import { fetch, ResponseType } from '@tauri-apps/api/http';
-import { Reflection } from "../meta/reflection";
-import { Database } from "../meta/database";
-import { Serialize } from "../meta/serialize";
+import { Reflection } from "../../meta/reflection";
+import { Database } from "../../meta/database";
+import { Serialize } from "../../meta/serialize";
 
 export class ModTag
 {

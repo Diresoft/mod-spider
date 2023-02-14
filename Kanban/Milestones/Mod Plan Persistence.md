@@ -4,12 +4,18 @@ kanban-plugin: basic
 
 ---
 
-## Backlog
+## Planned
 
+- [ ] @[[Feb 12th, 2023]] #feature Click a button to save current mod plan to JSON file
+- [ ] @[[Feb 12th, 2023]] #feature  Choose location to save JSON to
+- [ ] @[[Feb 12th, 2023]] #feature Load Mod Plan from JSON
+- [ ] @[[Feb 12th, 2023]] #feature Show Recent Plans in the Recents list
+- [ ] @[[Feb 12th, 2023]] #feature Implement undo for Mod Group delete
 
 
 ## In Progress
 
+- [ ] @[[Feb 14th, 2023]] #feature [[Create a new Mod Plan]]
 
 
 ## Complete

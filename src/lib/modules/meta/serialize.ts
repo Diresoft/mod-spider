@@ -1,4 +1,6 @@
-import type { Mod } from "../mod/Mod";
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+/* eslint-disable no-inner-declarations */
+import type { Mod } from "../app/mod/Mod";
 import type { Constructor, PrototypeOf } from "../util/types";
 import { Database } from "./database";
 import { Reflection } from "./reflection";
@@ -13,7 +15,7 @@ export class SerializationError extends Error
 	}
 }
 
-export namespace Serialize
+export namespace Serialize // eslint-disable-line @typescript-eslint/no-namespace
 {
 	const name_to_info_lut: Map< string, SerializationInfo<any>> = new Map();
 

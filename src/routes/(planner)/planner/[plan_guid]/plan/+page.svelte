@@ -1,10 +1,11 @@
 <script lang="ts">
-	import Foldout from "$lib/components/Foldout.svelte";
-
-
+	import type { PageData } from './$types';
+  
+	export let data: PageData;
+	console.log( `Hello Page:`, data );
 </script>
 <style lang="scss">
 	
 </style>
 
-<h1>No Group Selected</h1>
+<h1></h1>

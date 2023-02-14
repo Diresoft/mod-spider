@@ -2,11 +2,11 @@
 	import { goto } from '$app/navigation';
 	import PushBreadcrumb from '$lib/components/Breadcrumbs/PushBreadcrumb.svelte';
 	import ImageCover from '$lib/components/ImageCover.svelte';
-	import { app, SINGLETON_PLAN } from '$lib/modules/app/application_context';
+	import { app } from '$lib/modules/app/application_context';
 	import type { ModPlan } from '$lib/modules/app/project/ModPlan';
 	import { btnAnchor } from '$lib/modules/util/helpers';
 
-	let plans : ModPlan[] = [ SINGLETON_PLAN ];
+	let plans : ModPlan[] = [ ];
 	const cover_img_src = "covers/logo_white.png"
 </script>
 

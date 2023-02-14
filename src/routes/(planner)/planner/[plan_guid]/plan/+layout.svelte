@@ -1,13 +1,18 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import PushBreadcrumb from '$lib/components/Breadcrumbs/PushBreadcrumb.svelte';
-	import ModGroupEntry from '$lib/components/planning/ModGroupEntry.svelte';
-
-	import { ModGroup, TEMP_MOD_GROUPS } from '$lib/modules/app/application_context';
+	import ModGroupEntry, { source, source_parent } from '$lib/components/planning/ModGroupEntry.svelte';
+	import { ModGroup } from '$lib/modules/app/project/ModGroup';
 	import { get, writable, type Writable } from 'svelte/store';
+	import type { LayoutData } from './$types';
 
-	let wrapped_root = writable(TEMP_MOD_GROUPS);
+	export let data: LayoutData;
 
-	type GroupDropEvent = CustomEvent<{ source: Writable<ModGroup>, target: Writable<ModGroup>, source_parent?: Writable<ModGroup>, target_parent?: Writable<ModGroup> }>;
+	let wrapped_root = writable( new ModGroup("ASDF", "") );
+	const bIsDragging = writable( false );
+	const bIsHoveringRemove = writable( false );
+
+	type GroupDropEvent = CustomEvent<{ source: Writable<ModGroup>, target: Writable<ModGroup>, source_parent: Writable<ModGroup>, target_parent: Writable<ModGroup> }>;
 	function onGroupDroppedInside( event: GroupDropEvent )
 	{
 		const { source, target, source_parent } = event.detail;
@@ -37,14 +42,10 @@
 
 	function onGroupDroppedAfter( event: GroupDropEvent )
 	{
-		const { source, target, source_parent, target_parent } = event.detail;
-
-
-		const source_group = get( source );
-		const target_group = get( target );
-		
-		const source_parent_group = get( source_parent ?? writable(new ModGroup( "No Source Parent", "" ) ) );
-		const target_parent_group = get( target_parent ?? writable(new ModGroup( "No Target Parent", "" ) ) );
+		const { source, target, source_parent, target_parent } = event.detail
+		const source_group			= get( source );
+		const target_group			= get( target );
+		const target_parent_group	= get( target_parent );
 
 		// Update the parents
 		if ( source_parent !== undefined )
@@ -76,20 +77,72 @@
 		subgroups = v.subgroups;
 	})
 	
+	function onModDroppedOnRemove ( e: DragEvent ) {
+		if ( source === null || source_parent === null ) 
+		{
+			console.warn( `Trying to remove a mod group, but dragging source or it's parent was null` );
+			return;
+		}
+
+		const s = get(source);
+		source_parent.update( p => {
+			p.subgroups = p.subgroups.filter( v => v !== s )
+			return p;
+		} );
+
+		bIsDragging.set( false );
+		bIsHoveringRemove.set( false );
+	}
+
+	function onAddGroup () {
+		wrapped_root.update( g => {
+			g.subgroups.push( new ModGroup( "New Group", "" ) );
+			return g;
+		} )
+	}
+
+	function selectGroup ( e: CustomEvent<{ group: ModGroup }> )
+	{
+		const { group } = e.detail;
+		goto( `/planner/${data.plan.guid}/plan/${group.guid}` );
+	}
+
 </script>
 <PushBreadcrumb href="./plan" text="Plan" icon='rebase_edit' postfix_icon />
 
 <content>
 	<article class="groups">
-		<!--
-			The major mod groups, each group contains multiple mods. This view should be re-arrangeable with drag and drop. 
-			The list should be hierarchical, allowing for the creation of subgroups that move with the parent group
-		-->
-		{#each subgroups as group ( group.guid ) }
-			<ModGroupEntry group={group} expanded on:dropInside={onGroupDroppedInside} on:dropAfter={onGroupDroppedAfter} parent={wrapped_root}/>
-		{/each}
-	
+		<group-container>
+			<!--
+				The major mod groups, each group contains multiple mods. This view should be re-arrangeable with drag and drop. 
+				The list should be hierarchical, allowing for the creation of subgroups that move with the parent group
+			-->
+			{#each subgroups as group ( group.guid ) }
+				<ModGroupEntry
+					parent={wrapped_root}
+					group={group}
+					expanded
+					on:dropInside	= { onGroupDroppedInside }
+					on:dropAfter	= { onGroupDroppedAfter  }
+					on:dragstart	= { () => bIsDragging.set( true  ) }
+					on:dragstop		= { () => bIsDragging.set( false ) }
+					on:selectGroup	= { selectGroup }
+				/>
+			{/each}
+		</group-container>
+		<add_remove_action
+			class:remove-action		= { $bIsDragging }
+			class:action-hovered	= { $bIsHoveringRemove }
+
+			on:click		={ onAddGroup }
+
+			on:dragenter	={ ()=>bIsHoveringRemove.set( true  ) }
+			on:dragleave	={ ()=>bIsHoveringRemove.set( false ) }
+			on:dragover		={ ( e ) => e.preventDefault()		  }
+			on:drop			={ onModDroppedOnRemove  }
+		/>
 	</article>
+
 	<article class="detail">
 		<!--
 			Shows detail about the selected mod group. Lists mods found in that group and provides a section to add new mods
@@ -121,12 +174,66 @@
 		}
 
 		.groups {
-			overflow-y: auto;
-			width: 15vw;
+			display:	flex;
+			flex-direction: column;
+			width:		15vw;
+
+			padding: 1em;
 		}
 
 		.detail {
 			flex-grow: 1;
+		}
+	}
+	group-container {
+		display:	block;
+		overflow-y:	auto;
+
+		flex-grow: 1;
+	}
+
+	add_remove_action {
+		display: block;
+
+		width: 100%;
+		height: 4em;
+		
+		border: solid 3px var(--on-surface);
+		border-radius: 1em;
+
+		cursor: pointer;
+
+		transition:
+			  background-color ease-in-out 100ms
+			, color ease-in-out 100ms
+		;
+
+		&:hover ,
+		&.action-hovered {
+			background-color: var( --on-surface );
+			color: var( --surface );
+		}
+		
+		&::before {
+			content: "add";
+
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			transform: translate( -50%, -50% );
+
+			font-size: 3em;
+			font-family: "Material Symbols Sharp"
+		}
+
+		&.remove-action {
+			
+			border: dashed 3px var(--on-surface);
+			border-radius: 1em;
+			
+			&::before {
+				content: "delete"
+			}
 		}
 	}
 </style>

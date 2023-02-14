@@ -8,7 +8,7 @@
 	import { createEventDispatcher } from "svelte";
 	import { quintOut } from "svelte/easing";
 	import { slide } from "svelte/transition";
-	import { writable, type Writable } from "svelte/store";
+	import { get, writable, type Writable } from "svelte/store";
 
 	enum DropPosition {
 		None,
@@ -47,6 +47,11 @@
 			expanded = !expanded;
 		}
 	}
+
+	function doSelectGroup()
+	{
+		dispatch("selectGroup", { group } );
+	}
 	
 	function getDropTarget( e: DragEvent ): HTMLElement | false
 	{
@@ -73,6 +78,8 @@
 		source			= source_group;
 		source_parent	= parent ?? null;
 		own_dropzones	= Array.from( (e.target as HTMLElement|null)?.querySelectorAll( 'dropzone-after, dropzone-inside' ) ?? [] );
+		e.dataTransfer?.setData("diresoft/guid", get(source_group).guid.toString() );
+		dispatch( "dragstart" );
 	}
 
 	function dragenter( position_target: DropPosition, e: DragEvent )
@@ -109,6 +116,7 @@
 		// Reset
 		source			= null;
 		source_parent	= null;
+		dispatch( "dragstop" );
 	}
 
 	function dropAfter( target: Writable<ModGroup>, e: DragEvent )
@@ -121,6 +129,7 @@
 		// Reset
 		source			= null;
 		source_parent	= null;
+		dispatch( "dragstop" );
 	}
 
 </script>
@@ -301,10 +310,14 @@ group {
 	class:expanded
 	class:hover-inside ={ $hoverDropPosition === DropPosition.Inside }
 	class:hover-after  ={ $hoverDropPosition === DropPosition.After  }
-	on:click={doExpand}
+	on:click={ () => {
+		doExpand();
+		doSelectGroup();
+	} }
 
 	draggable		= {!expanded}
 	on:dragstart	= { dragstart.bind( undefined, wrapped_group ) }
+	on:dragend		= { () => dispatch('dragstop') }
 >
 	<drop-visualizer/>
 	<dropzone-inside
@@ -333,7 +346,15 @@ group {
 				transition:slide={{duration: 300, easing:quintOut}}
 			>
 				{ #each subgroups as subgroup (subgroup.guid) }
-					<svelte:self on:dropInside on:dropAfter group={subgroup} parent={wrapped_group}/>
+					<svelte:self
+						group	= {subgroup}
+						parent	= {wrapped_group}
+						on:dropInside
+						on:dropAfter
+						on:dragstart
+						on:dragstop	
+						on:selectGroup
+					/>
 				{/each}
 			</div>
 		{/if}

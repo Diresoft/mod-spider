@@ -16,8 +16,6 @@
 	import { invoke } from '@tauri-apps/api/tauri'
 
 	import { WebviewWindow } from "@tauri-apps/api/window";
-	import { TEMP_ALL_MODS } from "$lib/modules/app/application_context";
-
 
 	listen('tauri://file-drop', event => {
 		console.log('tauri://file-drop', event)
