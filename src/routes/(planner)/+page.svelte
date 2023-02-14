@@ -3,11 +3,17 @@
 	import PushBreadcrumb from '$lib/components/Breadcrumbs/PushBreadcrumb.svelte';
 	import ImageCover from '$lib/components/ImageCover.svelte';
 	import { app } from '$lib/modules/app/application_context';
-	import type { ModPlan } from '$lib/modules/app/project/ModPlan';
+	import { ModPlan } from '$lib/modules/app/project/ModPlan';
 	import { btnAnchor } from '$lib/modules/util/helpers';
 
 	let plans : ModPlan[] = [ ];
 	const cover_img_src = "covers/logo_white.png"
+
+	async function openNewPlan() {
+		const newPlan: ModPlan = new ModPlan();
+		goto( `/planner/${newPlan.guid}/details` );
+	}
+
 </script>
 
 <PushBreadcrumb href="/" text="Home"/>
@@ -45,7 +51,7 @@
 					<i>more_horiz</i>
 					<span>Browse</span>
 				</button>
-				<button class="border right-round max">
+				<button class="border right-round max" on:click={ openNewPlan }>
 					<i>add</i>
 					<span>Add</span>
 				</button>
