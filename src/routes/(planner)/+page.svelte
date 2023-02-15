@@ -4,6 +4,7 @@
 	import ImageCover from '$lib/components/ImageCover.svelte';
 	import { app } from '$lib/modules/app/application_context';
 	import { ModPlan } from '$lib/modules/app/project/ModPlan';
+	import { Serialize } from '$lib/modules/meta/serialize';
 	import { btnAnchor } from '$lib/modules/util/helpers';
 
 	let plans : ModPlan[] = [ ];
@@ -11,7 +12,8 @@
 
 	async function openNewPlan() {
 		const newPlan: ModPlan = new ModPlan();
-		goto( `/planner/${newPlan.guid}/details` );
+		app.ActivePlan = newPlan;
+		goto( `/planner/details` );
 	}
 
 </script>

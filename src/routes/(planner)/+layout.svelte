@@ -5,21 +5,11 @@
 	import 'material-symbols';
 
 	import { btnAnchor } from '$lib/modules/util/helpers';
-	import { app } from '$lib/modules/app/application_context';	
 	import Breadcrumbs from '$lib/components/Breadcrumbs/Breadcrumbs.svelte';
-	import type { LayoutData } from './$types';
 	import { page } from '$app/stores';
-	import { afterNavigate } from '$app/navigation';
 	import { ModPlan } from '$lib/modules/app/project/ModPlan';
-
-	import { listen } from '@tauri-apps/api/event'
-	import { invoke } from '@tauri-apps/api/tauri'
-
 	import { WebviewWindow } from "@tauri-apps/api/window";
 
-	listen('tauri://file-drop', event => {
-		console.log('tauri://file-drop', event)
-	})
 
 	function OpenConstellation() {
 		// Spawns the window. Doesn't need to do much more here
@@ -32,13 +22,6 @@
 			width:			800
 		});
 	}
-
-
-	function test()
-	{
-		invoke( 'open_docs' );
-	}
-
 </script>
 
 <header>
@@ -46,9 +29,9 @@
 		<h5 class="max left-align">
 			<Breadcrumbs />
 		</h5>
-		{#if $page.data.plan instanceof ModPlan}
+		{#if $page.data.plan !== null}
 		<nav class="no-space">
-			<button class="border left-round small primary-border primary-text" on:click={ () => test() }>
+			<button class="border left-round small primary-border primary-text">
 				<i>save</i>
 				<div class="tooltip bottom">Save</div>
 			</button>

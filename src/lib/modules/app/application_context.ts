@@ -1,12 +1,63 @@
 import { writable, type Writable } from "svelte/store";
 import { Serialize } from "../meta/serialize";
+import { EventEmitter, type EventMapType } from "../util/EventEmitter";
+import type { ModPlan } from "./project/ModPlan";
 
+enum AppContextEvent {
+	Autosave
+}
+interface AppContextEventMap extends EventMapType {
+	[AppContextEvent.Autosave]: () => void
+}
 
 @Serialize.Manage()
-export class AppContext
+export class AppContext extends EventEmitter<AppContextEventMap>
 {
 	@Serialize.ConfigureProperty( { Ignored: true } )
 	public crumbs : Writable< Array< {text:null|string, href:string, icon:undefined|string, postfix_icon:boolean} > > = writable([]);
+
+	@Serialize.ConfigureProperty( { Ignored: true } )
+	private _active_plan : ModPlan|null = null;
+	public get ActivePlan(): ModPlan|null
+	{
+		if ( this._active_plan === null && localStorage.getItem( 'active_plan' ) !== null )
+		{	// At least try and load it from local storage
+			try
+			{
+				console.log( `Deserialize plan from local storage` );
+				this._active_plan = Serialize.fromJSON<ModPlan>( localStorage.getItem( 'active_plan' ) as string );
+			}
+			catch(e)
+			{
+				console.warn( `Unable to load active plan.`, e );
+			}
+		}
+		return this._active_plan;
+	}
+	public set ActivePlan( plan: ModPlan|null )
+	{
+		this._active_plan = plan;
+		if ( this._active_plan !== null )
+		{
+			localStorage.setItem('active_plan', Serialize.toJSON( this._active_plan ) );
+		}
+	}
+
+	private onAutosave()
+	{
+		if ( this._active_plan !== null )
+		{
+			localStorage.setItem('active_plan', Serialize.toJSON( this._active_plan ) );
+		}
+		this.emit( AppContextEvent.Autosave );
+		setInterval( this.onAutosave.bind(this), 1000 );
+	}
+
+	constructor()
+	{
+		super();
+		//this.onAutosave();
+	}
 }
 export const app = new AppContext();
 
