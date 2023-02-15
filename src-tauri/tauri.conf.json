@@ -1,26 +1,22 @@
 {
-  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
   "build": {
-    "beforeBuildCommand": "yarn run build",
-    "beforeDevCommand": "yarn run dev",
+    "beforeDevCommand": "yarn dev",
+    "beforeBuildCommand": "yarn build",
     "devPath": "http://localhost:1420",
-    "distDir": "../build"
+    "distDir": "../build",
+    "withGlobalTauri": false
   },
   "package": {
     "productName": "mod-spider",
-    "version": "0.0.1"
+    "version": "0.0.0"
   },
   "tauri": {
     "allowlist": {
-      "all": true,
-	  "window": {
-		"all": true
-	  },
-	  "http": {
-		"all": true,
-		"request": true,
-		"scope": [ "https://**" ]
-	  }
+      "all": false,
+      "shell": {
+        "all": false,
+        "open": true
+      }
     },
     "bundle": {
       "active": true,
@@ -62,16 +58,16 @@
       "active": false
     },
     "windows": [
-      {
-        "fullscreen":		false,
-        "width":			1200,
-        "height":			720,
-        "resizable":		true,
-		"minWidth":			1200,
-		"minHeight":		720,
-        "title":			"Mod Spider",
-		"fileDropEnabled":	false
-      }
+		{
+		  "fullscreen":			false,
+		  "width":				1200,
+		  "height":				720,
+		  "resizable":			true,
+		  "minWidth":			1200,
+		  "minHeight":			720,
+		  "title":				"Mod Spider",
+		  "fileDropEnabled":	false
+		}
     ]
   }
 }
