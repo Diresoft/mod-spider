@@ -9,6 +9,7 @@
 	import { page } from '$app/stores';
 	import { ModPlan } from '$lib/modules/app/project/ModPlan';
 	import { WebviewWindow } from "@tauri-apps/api/window";
+    import { app, AppContextEvent } from '$lib/modules/app/application_context';
 
 
 	function OpenConstellation() {
@@ -31,7 +32,7 @@
 		</h5>
 		{#if $page.data.plan !== null}
 		<nav class="no-space">
-			<button class="border left-round small primary-border primary-text">
+			<button on:click={ () => app.Save() } class="border left-round small primary-border primary-text">
 				<i>save</i>
 				<div class="tooltip bottom">Save</div>
 			</button>

@@ -1,11 +1,9 @@
 <script lang="ts">
-	import type { PageData } from './$types';
-  
-	export let data: PageData;
-	console.log( `Hello Page:`, data );
+    import type { ModGroup } from "$lib/modules/app/project/ModGroup";
+    import type { Writable } from "svelte/store";
 </script>
-<style lang="scss">
-	
-</style>
 
-<h1></h1>
+<h1>No Group Selected</h1>
+
+<style lang="scss">
+</style>

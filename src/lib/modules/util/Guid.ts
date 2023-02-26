@@ -1,19 +1,13 @@
-import { Database } from "../meta/database";
-import { Reflection } from "../meta/reflection";
-import { Serialize } from "../meta/serialize";
-import type { PrototypeOf, _protected_ctor } from "./types";
+import { Serializable } from "../meta/serializable";
+import { SingletonByProperty, SingletonProperty } from "../meta/singleton";
 
-@Serialize.Manage(
-	{
-		TypeHydrator: ( value: string ) => Guid.From( value ),
-		Hydrator: null
-	}
-)
-@Database.Manage
+@Serializable( ( guid_string: string ) => Guid.From( guid_string ) )
+@SingletonByProperty
 export class Guid {
 
-	@Database.PrimaryKey
+	@SingletonProperty
 	public readonly value : string;
+
 	public static From( source_guid: Guid | string )
 	{
 		// TODO: Validate the input is actually a guid if it's a string

@@ -1,18 +1,27 @@
+<script lang="ts" context="module">
+	export let selected_group: Writable<ModGroup> | null = null;
+</script>
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import PushBreadcrumb from '$lib/components/Breadcrumbs/PushBreadcrumb.svelte';
 	import ModGroupEntry, { source, source_parent } from '$lib/components/planning/ModGroupEntry.svelte';
 	import { ModGroup } from '$lib/modules/app/project/ModGroup';
+    import { GenericPersistedStore } from '$lib/modules/util/PersistedStore';
 	import { get, writable, type Writable } from 'svelte/store';
 	import type { LayoutData } from './$types';
 
 	export let data: LayoutData;
 
-	let wrapped_root = writable( new ModGroup("ASDF", "") );
+	let wrapped_root = new GenericPersistedStore( data.plan.guid, data.plan.groups );
 	const bIsDragging = writable( false );
 	const bIsHoveringRemove = writable( false );
 
-	type GroupDropEvent = CustomEvent<{ source: Writable<ModGroup>, target: Writable<ModGroup>, source_parent: Writable<ModGroup>, target_parent: Writable<ModGroup> }>;
+	type GroupDropEvent = CustomEvent<{
+		source:			Writable<ModGroup>,
+		target:			Writable<ModGroup>,
+		source_parent:	Writable<ModGroup>,
+		target_parent:	Writable<ModGroup>
+	}>;
 	function onGroupDroppedInside( event: GroupDropEvent )
 	{
 		const { source, target, source_parent } = event.detail;
@@ -101,10 +110,12 @@
 		} )
 	}
 
-	function selectGroup ( e: CustomEvent<{ group: ModGroup }> )
+	function selectGroup ( e: CustomEvent<{ group: Writable<ModGroup> }> )
 	{
-		const { group } = e.detail;
-		goto( `/planner/${data.plan.guid}/plan/${group.guid}` );
+		console.log( `Set group selection to`, e.detail.group );
+		selected_group = e.detail.group;
+		const group = get( selected_group );
+		goto( `plan/${group.guid}` );
 	}
 
 </script>
@@ -130,6 +141,7 @@
 				/>
 			{/each}
 		</group-container>
+		<!-- svelte-ignore a11y-click-events-have-key-events -->
 		<add_remove_action
 			class:remove-action		= { $bIsDragging }
 			class:action-hovered	= { $bIsHoveringRemove }
@@ -162,8 +174,6 @@
 
 		flex-grow:		1;
 		flex-direction:	row;
-
-		border: solid 1px red;
 
 		& > article {
 			display:		inline-block;

@@ -1,7 +1,6 @@
-import { app } from "../application_context";
-import { DoNotSerialize, Serializable } from "../metaprogramming/serialization_decorators";
 import { Guid } from "../../util/Guid";
 import type { Mod } from "./Mod";
+import { Serializable } from "$lib/modules/meta/serializable";
 
 export enum ModLinkType {
 	  Note
@@ -10,7 +9,7 @@ export enum ModLinkType {
 	, Incompatible
 }
 
-@Serializable
+@Serializable()
 export class ModLinkDescriptor<T = string> {
 	public readonly type	: ModLinkType;
 	public          notes	: undefined | T;
@@ -20,11 +19,12 @@ export class ModLinkDescriptor<T = string> {
 	}
 }
 
-@Serializable
+@Serializable()
 export class ModLink<ModType extends Mod, NoteType=string>
 {
 	private readonly _target_guid	: Guid;
-	@DoNotSerialize
+
+	@Serializable.PropertyConfiguration( { Ignored: true } )
 	private          _target		: ModType | null = null;
 
 	public readonly guid			: Guid = Guid.Create();

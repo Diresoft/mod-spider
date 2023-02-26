@@ -16,7 +16,8 @@
 			"sveltejs",
 			"Unlisten",
 			"Unlistener"
-		]
+		],
+		"explorer.sortOrder": "filesFirst"
 	},
 	"launch": {
 		"version": "0.2.0"

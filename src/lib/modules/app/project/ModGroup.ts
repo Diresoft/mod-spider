@@ -1,12 +1,18 @@
-import { Database } from "../../meta/database";
+import { Serializable } from "$lib/modules/meta/serializable";
+import { SingletonByProperty, SingletonProperty } from "$lib/modules/meta/singleton";
 import { Guid } from "../../util/Guid";
 
-@Database.Manage
+@Serializable( ( value: any ): ModGroup => {
+	return new ModGroup( value.name, value.description, value.subgroups );
+})
+@SingletonByProperty
 export class ModGroup {
-	@Database.PrimaryKey
+	@SingletonProperty
 	public readonly	guid: Guid				= Guid.Create();
 	public			name: string			= "New Mod Group";
 	public			description: string		= "";
+
+	@Serializable.PropertyConfiguration( { Ignored: true } )
 	public			parent: ModGroup|null	= null;
 	
 	public subgroups: ModGroup[];

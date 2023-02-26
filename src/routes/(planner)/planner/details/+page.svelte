@@ -9,11 +9,11 @@
 
 <main class="responsive">
 	<div class="field label border large">
-		<input type="text" placeholder=" " value={data.plan.descriptor.display_title}>
+		<input type="text" placeholder=" " bind:value={data.plan.descriptor.display_title}>
 		<label>Plan Title</label>
 	</div>
 	<div class="field label border round small">
-		<input type="text" placeholder=" " value={data.plan.descriptor.description}>
+		<input type="text" placeholder=" " bind:value={data.plan.descriptor.description}>
 		<label>Plan Description</label>
 	</div>
 </main>

@@ -15,12 +15,13 @@ kanban-plugin: basic
 
 ## In Progress
 
-- [ ] @[[Feb 14th, 2023]] #feature [[Create a new Mod Plan]]
+- [ ] @[[Feb 23rd, 2023]] #feature <br> Mutate Mod Groups in Plan with reload persistence
 
 
 ## Complete
 
 **Complete**
+- [x] @[[Feb 14th, 2023]] #feature [[Create a new Mod Plan]]
 
 
 

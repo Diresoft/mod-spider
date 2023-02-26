@@ -4,11 +4,13 @@
 	export let own_dropzones:	Array<HTMLElement> | null	= null;
 </script>
 <script lang="ts">
-	import type { ModGroup } from "$lib/modules/app/application_context";
 	import { createEventDispatcher } from "svelte";
 	import { quintOut } from "svelte/easing";
 	import { slide } from "svelte/transition";
 	import { get, writable, type Writable } from "svelte/store";
+    import type { ModGroup } from "$lib/modules/app/project/ModGroup";
+    import { GenericPersistedStore } from "$lib/modules/util/PersistedStore";
+    import type { Guid } from "$lib/modules/util/Guid";
 
 	enum DropPosition {
 		None,
@@ -17,20 +19,21 @@
 	}
 
 	export let group:		ModGroup;
-	export let parent:		Writable<ModGroup>|undefined;
+	export let parent:		GenericPersistedStore<Guid,ModGroup>|undefined;
 	export let expanded:	boolean = false; // Initial state
 
 
 	const dispatch = createEventDispatcher();
 	const hoverDropPosition: Writable<DropPosition>	= writable( DropPosition.None );
 
-	let wrapped_group:	Writable<ModGroup> = writable( group );
+	let wrapped_group:	 GenericPersistedStore<Guid, ModGroup> = new GenericPersistedStore( group.guid, group );
 	let curHoverTarget:  HTMLElement|null	= null;
 	let expandable:		 boolean			= false;
 	let subgroups:		 ModGroup[]			= [];
 	let subgroup_length: number				= Number.MAX_VALUE;
 
 	wrapped_group.subscribe( (v: ModGroup) => {
+		console.log( `asdf`, v );
 		subgroups = v.subgroups;
 
 		const didGrow = subgroups.length > subgroup_length;
@@ -50,7 +53,7 @@
 
 	function doSelectGroup()
 	{
-		dispatch("selectGroup", { group } );
+		dispatch("selectGroup", { group: wrapped_group } );
 	}
 	
 	function getDropTarget( e: DragEvent ): HTMLElement | false
@@ -269,11 +272,11 @@ info {
 
 	&.hover-after drop-visualizer::before
 	{
-		content: "move_selection_down";
+		content: "move_down";
 	}
 	&.hover-after drop-visualizer {
 		&::before {
-			content: "move_selection_down";
+			content: "move_down";
 			
 			position:	absolute;
 			left:		50%;

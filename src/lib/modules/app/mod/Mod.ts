@@ -1,8 +1,7 @@
 import { Guid } from "../../util/Guid";
 import { fetch, ResponseType } from '@tauri-apps/api/http';
-import { Reflection } from "../../meta/reflection";
-import { Database } from "../../meta/database";
-import { Serialize } from "../../meta/serialize";
+import { Serializable } from "$lib/modules/meta/serializable";
+import { SingletonByProperty, SingletonProperty } from "$lib/modules/meta/singleton";
 
 export class ModTag
 {
@@ -75,25 +74,18 @@ export class PatreonModData extends ModScraperInterface
 
 }
 
-@Serialize.Manage()
-@Database.Manage
-@Reflection.StubConstructor( () => {
-	return new Mod( { owner: null } as unknown as ModScraperInterface );
-} )
+@SingletonByProperty
 export class Mod
 {
 	// -~= Properties =~-
 
 	// - Private
-	@Serialize.ConfigureProperty( { Ignored: true } )
 	public	_data	: ModScraperInterface;
 
 	// - Protected
 
-
 	// - Public
-
-	@Database.PrimaryKey
+	@SingletonProperty
 	public readonly	guid	: Guid	= Guid.Create();
 	
 	public get data()

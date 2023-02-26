@@ -63,7 +63,14 @@ export type TypedMethodFields<T>	= { [P in keyof FunctionProperties<T>		]: Typed
 export type TypedPropertyFields<T>	= { [P in keyof NonFunctionProperties<T>	]: TypedPropertyDescriptor<T[P]>	}
 
 
+// JSON type helpers
+export type JsonKeyType	= number|string;
+export type JsonPrimitive	= boolean|number|string|null;
+export type JsonArray		= Array<JsonObject>
+export type JsonObject		= ( JsonArray | JsonPrimitive ) | { [k in JsonKeyType]: JsonObject };
+
 
 
 /** A promise which never resolves */ 
 export const FOREVER = new Promise<void>( () => {} );
+
