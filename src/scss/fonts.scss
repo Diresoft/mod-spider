@@ -1,0 +1,9 @@
+@use 'util/index.scss' as Util;
+
+@include Util.font-face( 'Nunito', '/fonts/GoogleFonts/Nunito/Nunito-VariableFont_wght', null, null, ttf );
+@include Util.font-face( 'Nunito', '/fonts/GoogleFonts/Nunito/Nunito-Italic-VariableFont_wght', null, italic, ttf );
+
+@include Util.font-face( 'Inter', '/fonts/GoogleFonts/Inter/Inter-VariableFont_slnt,wght', null, null, ttf );
+
+// @include Util.font-face( 'bootstrap-icons', '/fonts/Bootstrap/bootstrap-icons', null, null, woff woff2 );
+// @include Util.font-face( 'tabler-icons', '/fonts/Tabler/tabler-icons', null, null, eot ttf woff woff2 );

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="64px" height="64px" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <rect id="chrome_restore" x="0" y="0" width="64" height="64" style="fill:none;"/>
+    <clipPath id="_clip1">
+        <rect id="chrome_restore1" serif:id="chrome_restore" x="0" y="0" width="64" height="64"/>
+    </clipPath>
+    <g clip-path="url(#_clip1)">
+        <path id="chrome_restore_curves" d="M51.025,51L51.025,64L-0.025,64L-0.025,58L0.025,58L0.025,12.932L13.025,12.932L13.025,-0L64.025,0L64.025,51L51.025,51ZM58.025,45L58.025,6L19.025,6L19.025,12.932L51.025,12.932L51.025,45L58.025,45ZM44.846,19L6.025,19L6.025,58L44.846,58L44.846,19Z"/>
+    </g>
+</svg>

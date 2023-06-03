@@ -1,0 +1,11 @@
+// THEME SETTINGS
+@use './colour.scss' as colour;
+
+$dark: colour.$black;
+$light: colour.$white;
+
+$secondary: colour.$dire-blue;
+$secondary-light: colour.$dire-blue-light;
+
+$primary: colour.$dire-red;
+$primary-light: colour.$dire-red-light;

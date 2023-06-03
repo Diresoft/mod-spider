@@ -1,0 +1,36 @@
+@use '$scss/branding/index.scss' as branding;
+
+:root {
+  font-family:	Helvetica, Arial, sans-serif;
+
+  font-size:	16px;
+  line-height:	24px;
+  font-weight:	400;
+
+  color: branding.$light;
+
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+	box-sizing: border-box;
+	user-select: none;
+
+	// Disable pointer events by default on elements
+	pointer-events: none;
+}
+
+// Enable pointer events by default on some element types
+textarea,
+input,
+button {
+	pointer-events: all;
+}
+
+body {
+	margin:		0;
+	padding:	0;
+}

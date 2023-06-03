@@ -1,0 +1,128 @@
+@use 'sass:color' as color;
+@use 'sass:math' as math;
+@use '../branding/index.scss' as branding;
+
+
+@mixin icon { font-family: 'bootstrap-icons'; }
+@mixin material-icon { font-family: 'Material Symbols Sharp'; }
+
+@mixin button_reset {
+	background: none;
+	border:     none;
+	outline:    none;
+	cursor:     pointer;
+	pointer-events: all;
+
+	color: branding.$light;
+}
+
+@mixin button(
+	$primary: branding.$primary,
+	$light: branding.$light,
+	$padding: 0.5em,
+	$corner-radius: 0.65em
+) {
+	// Compute additional properties based on input
+	$hover-bg:   color.adjust( $primary,   $alpha:     -0.35 );
+	$hover-bor:  color.adjust( $light,     $lightness: -15%  );
+	$active-col: color.adjust( $light,     $alpha:     -0.2  );
+	$active-bor: color.adjust( $hover-bor, $alpha:     -0.5  );
+
+	cursor: pointer;
+
+	font-size: 1em;
+
+	background-color: transparent;
+	color:            $light;
+	padding:          $padding;
+	padding-left:     $padding + ( math.div( $corner-radius, 4 ) );
+	padding-right:    $padding + ( math.div( $corner-radius, 4 ) );
+
+	transition:
+		background-color 100ms ease-in-out,
+		color            100ms ease-in-out,
+		border-color     100ms ease-in-out
+	;
+
+	border:       solid 1px $primary;
+	border-radius: $corner-radius;
+
+	&:not([disabled])
+	{
+		&:hover
+		{
+			background-color: $hover-bg;
+			border-color:     $hover-bor;
+		}
+
+		&:active
+		{
+			color:        $active-col;
+			border-color: $active-bor;
+		}
+	}
+
+}
+
+
+@mixin button_group(
+	$primary: branding.$primary,
+	$light: branding.$light,
+	$padding: 0.5em,
+	$corner-radius: 0.65em
+) {
+	// Compute additional properties based on input
+	$hover-bg:   color.adjust( $primary,   $alpha:     -0.35 );
+	$hover-bor:  color.adjust( $light,     $lightness: -15%  );
+	$active-col: color.adjust( $light,     $alpha:     -0.2  );
+	$active-bor: color.adjust( $hover-bor, $alpha:     -0.5  );
+
+	cursor: pointer;
+
+	font-size: 1em;
+
+	background-color: transparent;
+	color:            $light;
+	padding:          $padding;
+
+	transition:
+		background-color 100ms ease-in-out,
+		color            100ms ease-in-out,
+		border-color     100ms ease-in-out
+	;
+
+	border:       solid 1px $primary;
+	border-right: solid 1px transparent;
+
+	&:first-child {
+		padding-left: $padding + math.div( $corner-radius, 4 );
+		border-top-left-radius:    $corner-radius;
+		border-bottom-left-radius: $corner-radius;
+	}
+	&:last-child {
+		padding-right: $padding + math.div( $corner-radius, 4 );
+		border-top-right-radius:    $corner-radius;
+		border-bottom-right-radius: $corner-radius;
+		border-right-color:         $primary;
+	}
+
+	&:only-child {
+		border-radius: $corner-radius;
+	}
+
+	&:not([disabled])
+	{
+		&:hover
+		{
+			background-color: $hover-bg;
+			border-color:     $hover-bor;
+		}
+
+		&:active
+		{
+			color:        $active-col;
+			border-color: $active-bor;
+		}
+	}
+
+}
