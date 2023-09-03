@@ -1,6 +1,3 @@
-import type { Mod } from "./Mod";
-import { Reference, type Referable } from "./Reference";
-
 // == Utility type helpers ==
 type ImmutableObject<T>  = { readonly [K in keyof T]: Immutable<T[K]> }
 export type Immutable<T> = { readonly [K in keyof T]: T[K] extends Function ? T[K] : ImmutableObject<T[K]> }
@@ -9,20 +6,6 @@ export type OptionalPromise <T>     = Promise<T> | T;
 
 
 // == JSON type helpers ==
-// export type JsonKeyType							= number|string;
-// export type JsonKeysOf<T>						= { [K in keyof T]: K extends JsonKeyType ? T[K] extends Function ? never : K : never }[keyof T];
-// // export type JsonPrimitive						= boolean|number|string|null;
-// // export type JsonArray<T = JsonType>				= T[]
-// export type JsonObject_old< T extends object = {} > = Partial<{ [K in JsonKeysOf<T>]: JsonType<T[K]>} >
-// export type JsonType_old<T = any>					= T extends JsonPrimitive
-// 													? T
-// 													: T extends Array<infer R>
-// 														? JsonArray<JsonType_old<R>>
-// 														: T extends object
-// 															? JsonObject<T>
-// 															: never
-
-
 export type JsonKey       = number|string;
 export type JsonPrimitive = boolean|number|string|null;
 export type JsonKeys<T>   = {
@@ -103,7 +86,7 @@ function _int_defaultUuidProvider<T extends object>( this: T, target: T ): UuidT
 {
 	return Reflect.get( this,   "uuid" ) as UuidType
 		?? Reflect.get( target, "uuid" ) as UuidType
-		?? crypto.randomUUID();
+		?? crypto.randomUUID(); // TODO: this will create different UUIDs on round trips. For things like a Set, where I'm not able to provide a consistent UUID
 }
 function _int_getUuidFor<T extends Class>( target: Immutable<InstanceType<T>>, meta: SerializableInfo<T> )
 {
@@ -163,11 +146,36 @@ Serializable.UUID_PROVIDER = Symbol( "@@Serializable::UUID_PROVIDER" );
 // Provide a static reverse LUT for hydrating from the type name
 Serializable.REVERSE_LUT = new Map<string, Class>();
 
+
+// == Primitive Type Custom Serializers ==
+// TODO: I need to handle some types specially. Effectively I need to give them a toJSON/fromJSON conversion in place.
+// The reason for this is that these types might not have a stable uuid
+// i.e. a Set won't _have_ a UUID, but if gets serialized outside of the object it needs one. That means I need to generate a UUID for it.
+// That alone won't be an issue. However, the problem is that this UUID will be different each time.
+// I serialize to a UUID, deserialize, then reserialize again and the UUID will change. This means the old UUID will persist forever in localStorage.
+// It may eventually expire and delete itself, but I also don't _need_ to serialize this to a separate object. What would be more important is that
+// the objects _in_ the set become external references. A set would just turn into an array of values, which should then be serialized into new items
+// in the dataProvider (unless it's not a serializable type)
+//
+// The alternative would be to _serialize_ the Set as a separate object, but somehow handle the UUID issue. Either by deleting the old Key immediately
+// upon deserialization (would need some way to differentiate permanent UUIDs vs transient UUIDs). Or, I actually add the UUID to the Set's
+// members so the next time it serializes it uses the same key.
+// This might actually be preferable, as it circumvents the circular array reference issue.
+// 
+// So I need a way to mark transient keys that attach themselves to deserialized objects.
+
+
+
+
+
+
+
+
 // DO NOT CHANGE THIS YOU IDIOT
 // Every time you touch the serialization code you spend a month re-writing it. Find another way to solve the issue and leave this as it stands!
 // For example, want to make some properties ignored? TOO BAD, DO IT IN THE `toJSON`!
 //              want to change something about the object asynchronously? DO IT IN THE DEHYDRATOR DECORATOR PARAMETER
-Serializable.Dehydrate = async function<T extends Class, I extends InstanceType<T> = InstanceType<T>>( target: Immutable<I>, dataProvider: DataProvider ): Promise< SerializeTyped< JsonType<I> > >
+Serializable.Dehydrate = async function<T extends Class, I extends InstanceType<T> = InstanceType<T>>( target: I, dataProvider: DataProvider ): Promise< SerializeTyped< JsonType<I> > >
 {
 	const pending = new Map();
 	const context = new Map();
@@ -222,7 +230,7 @@ async function _int_dehydrateRecursive<T extends Class, I extends InstanceType<T
 	return item;
 }
 
-
+// TODO: No custom hydrators/constructors are implemented yet.
 Serializable.Hydrate = async function<T extends Class>( target: SerializeTyped< JsonType< InstanceType<T> > >, dataProvider: DataProvider ): Promise< InstanceType<T> >
 {
 	const pending = new Map();
@@ -273,57 +281,7 @@ async function _int_hydrateRecursive<T extends Class>( target: SerializeTyped< J
 	return instance;
 }
 
-export abstract class SerializedReference<T> extends Reference<T>
+Serializable.HydrateFromUuid = async function<T extends Class>( uuid: string, dataProvider: DataProvider ): Promise<InstanceType<T>>
 {
-	protected abstract factory( uuid: string ): Promise<T>;
-	protected abstract hydrate( target: T, raw_serialized: string ): Promise<void>;
-	protected async retrieve( uuid: string ): Promise<T>
-	{
-		const ret: T = await this.factory( uuid );
-		const raw_serialized = localStorage.getItem( uuid );
-		if ( raw_serialized !== null )
-		{
-			this.hydrate( ret, raw_serialized );
-		}
-		
-		return ret;
-	}
-}
-
-export abstract class UniqueReference<T> extends SerializedReference<T>
-{
-	protected static ref_lut: Map< string, UniqueReference<unknown> > = new Map();
-	protected static lut: Map< string, unknown > = new Map();
-	protected async retrieve( uuid: string ): Promise<T>
-	{
-		if ( UniqueReference.lut.has( uuid ) )
-		{
-			return Promise.resolve( UniqueReference.lut.get( uuid ) as T );
-		}
-		else
-		{
-			return super.retrieve( uuid );
-		}
-	}
-
-	constructor( uuid: string, value ?: T)
-	constructor( value: Referable<T>)
-	constructor( uuid_or_value: string|Referable<T>, value?: T )
-	{
-		const uuid = typeof uuid_or_value === 'string' ? uuid_or_value : uuid_or_value.uuid;
-		if ( UniqueReference.ref_lut.has( uuid ) )
-		{
-			// If we already have a ref for this uuid, return that ref
-			return UniqueReference.ref_lut.get( uuid ) as UniqueReference<T>;
-		}
-		else if ( typeof uuid_or_value === 'string' )
-		{
-			// Otherwise create it as normal
-			super( uuid_or_value as string, value );
-		}
-		else
-		{
-			super( uuid_or_value as Referable<T> );
-		}
-	}
+	return Serializable.Hydrate( await dataProvider.get( uuid ), dataProvider );
 }

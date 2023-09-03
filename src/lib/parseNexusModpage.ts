@@ -1,6 +1,6 @@
 import { ResponseType, fetch } from '@tauri-apps/api/http';
 import { JSDOM } from 'jsdom';
-import { Mod, ModLink, ModReference } from './Mod';
+import { Mod } from './Mod';
 import { Serializable } from './Serialize';
 
 export class NexusMod extends Mod

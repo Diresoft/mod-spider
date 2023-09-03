@@ -1,44 +1,42 @@
-import { Serializable, UniqueReference } from "./Serialize";
+import { Serializable } from "./Serialize";
 
-export abstract class Mod
+@Serializable()
+export class ModLink<T extends Mod=Mod>
+{
+	public readonly ref_uuid: string;
+	protected       ref:      T;
+
+	public async get(): Promise<T>
+	{
+		return Promise.resolve( this.ref );
+	}
+
+	constructor( ref_uuid: string, ref?: T )
+	{
+		this.ref_uuid = ref_uuid;
+		this.ref = ref;
+	}
+
+	toJSON()
+	{
+		return { ref_uuid: this.ref_uuid }
+	}
+}
+
+@Serializable()
+export class Mod
 {
 	public readonly uuid: string;
-
 	public title: string;
 	public description: string;
-	
-	public requirements: ModLink[] = [];
 
-	constructor( uuid: string )
+	public requirements: Set<ModLink> = new Set();
+	constructor( uuid: string = crypto.randomUUID() )
 	{
 		this.uuid = uuid;
 	}
-}
-export abstract class ModReference<M extends Mod = Mod> extends UniqueReference<M>
-{
-	protected async hydrate(target: M, raw_serialized: string): Promise<void>
-	{
-		const raw_obj = JSON.parse( raw_serialized );
-		Object.assign( target, raw_obj );
 
-		for( const [i, req] of target.requirements.entries() )
-		{
-			target.requirements[i] = new ModLink( req.src, req.tar );
-			target.requirements[i].notes = req.notes;
-		}
-	}
+	public foo() {}
+	
 }
 
-export class ModLink
-{
-	public readonly src:	ModReference;
-	public readonly tar:	ModReference;
-
-	public notes: string[] = [];
-
-	constructor( src: ModReference, tar: ModReference )
-	{
-		this.src = src;
-		this.tar = tar;
-	}
-}
