@@ -4,9 +4,6 @@ dependencies:
   '@tauri-apps/api':
     specifier: ^1.4.0
     version: 1.4.0
-  '@types/luxon':
-    specifier: ^3.3.2
-    version: 3.3.2
   jsdom:
     specifier: ^22.1.0
     version: 22.1.0
@@ -24,6 +21,9 @@ devDependencies:
   '@tsconfig/svelte':
     specifier: ^5.0.0
     version: 5.0.0
+  '@types/luxon':
+    specifier: ^3.3.2
+    version: 3.3.2
   svelte:
     specifier: ^4.0.5
     version: 4.0.5
@@ -500,7 +500,7 @@ packages:
 
   /@types/luxon@3.3.2:
     resolution: {integrity: sha512-l5cpE57br4BIjK+9BSkFBOsWtwv6J9bJpC7gdXIzZyI0vuKvNTk0wZZrkQxMGsUAuGW9+WMNWF2IJMD7br2yeQ==}
-    dev: false
+    dev: true
 
   /@types/pug@2.0.6:
     resolution: {integrity: sha512-SnHmG9wN1UVmagJOnyo/qkk0Z7gejYxOYYmaAwr5u2yFYfsupN3sg10kyzN8Hep/2zbHxCnsumxOoRIRMBwKCg==}

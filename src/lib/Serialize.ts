@@ -66,22 +66,6 @@ export interface DataProvider {
 
 // == Internal utility and fallback functions ==
 
-function _int_defaultConstructor<T extends Class>( dehydrated: SerializeTyped<JsonType> ): InstanceType< T >
-{
-	const type = Serializable.REVERSE_LUT.get( dehydrated.$$type );
-	if ( type === undefined ) throw new Error( `Unknown type \`${dehydrated.$$type}\` encountered while running Serializable's default constructor` );
-
-	// Create an instance of that type, with all properties of the dehydrated object assigned to it
-	const instance = Object.assign( Reflect.construct( type, [] ), dehydrated );
-
-	// Delete the Serialization typings from the instance
-	delete instance.$$uuid;
-	delete instance.$$type;
-
-	// Return the newly created replica of the original instance
-	return instance;
-}
-
 function _int_defaultUuidProvider<T extends object>( this: T, target: T ): UuidType
 {
 	return Reflect.get( this,   "uuid" ) as UuidType
@@ -164,124 +148,230 @@ Serializable.REVERSE_LUT = new Map<string, Class>();
 // 
 // So I need a way to mark transient keys that attach themselves to deserialized objects.
 
+/*
+In a way, the presence or not of the UUID provider will dictate if the object should be transiently stored or permanently stored.
+Of course, when I say "transient" it's probably best not to consider it to be deletable. I should probably keep the data around, just
+make sure it's re-used.
 
+Another idea is to only put sub members in a "transient" space. Provide a uuid to the dehydrate function rather than try
+and scrape one from the object.
+I'd still need UUID providers though, since sub members will need to provide their own UUID.
 
+Do I want to provide a default UUID provider? I will _always_ need a UUID to serialize content to. I don't know if I can do some sort of string hash of the content...
+If I serialize in place I run the risk of cycles, so I need to flatten the content.
 
+I could also just use the file system as a database. It wouldn't be, like, serialization. It would be 
 
+*/
 
-
-
-// DO NOT CHANGE THIS YOU IDIOT
-// Every time you touch the serialization code you spend a month re-writing it. Find another way to solve the issue and leave this as it stands!
-// For example, want to make some properties ignored? TOO BAD, DO IT IN THE `toJSON`!
-//              want to change something about the object asynchronously? DO IT IN THE DEHYDRATOR DECORATOR PARAMETER
-Serializable.Dehydrate = async function<T extends Class, I extends InstanceType<T> = InstanceType<T>>( target: I, dataProvider: DataProvider ): Promise< SerializeTyped< JsonType<I> > >
-{
-	const pending = new Map();
-	const context = new Map();
-
-	const dehydrated = await _int_dehydrateRecursive( target, context, pending );
-
-	await Promise.all( Array.from( pending.values() ) );
-
-	for( const item of await Promise.all( Array.from( pending.values() ) ) )
-	{
-		dataProvider.put( item.$$uuid, item );
+type SerializedSet = Array< unknown >;
+Serializable({
+	async dehydrator( instance: Set<unknown> ): Promise< SerializedSet > {
+		console.log( `Dehydrating a set!`, instance );
+		return Array.from( instance.values() )
+	},
+	async hydrator( instance: SerializedSet ): Promise< Set< unknown > > {
+		console.log( `Hydrating a set` );
+		return new Set( instance );
 	}
+})(Set, null);
 
-	const jsonified = JSON.parse( JSON.stringify( dehydrated ) );
-	dataProvider.put( dehydrated.$$uuid, jsonified );
-
-	return jsonified;
-}
-async function _int_dehydrateRecursive<T extends Class, I extends InstanceType<T> = InstanceType<T>>( target: Immutable<I>, context?: Map<UuidType, any >, pending?: Map<UuidType, Promise<any>> ): Promise< SerializeTyped< JsonType<I> > >
+type ProcessRecord<I> = { item: I, clone: JsonType<I>, subscribers: Set<( value: I ) => void> };
+async function makeClone<T>( original: T ): Promise< JsonType<T> >
 {
-	// Get metadata for the callee
-	const meta = _int_getMetadataFor( target );
-	const uuid = meta.uuidProvider ? meta.uuidProvider.call( target, target ) : _int_defaultUuidProvider.call( target, target );
+	console.log( `makeClone(`, original, `)` )
+	const meta = _int_getMetadataFor( original );
+	if ( meta === undefined ) return original as JsonType<T>;
+	return meta.dehydrator ? meta.dehydrator.call( original, original ) : Object.assign( {}, original );
+}
+
+async function dehydrate_recursive<T>( item, pending?: Map<unknown, Promise<unknown>>, indent: number = 0 )
+{
+	console.log( `${'-> '.repeat( indent )}dehydrate_recursive(`, item, `)` );
 	
-	let item = context.get( uuid ) as JsonType<I>;
-	if ( item === undefined )
+	if ( pending === undefined ) pending = new Map();
+	const clone = await makeClone( item );
+
+	if( Array.isArray( clone ) )
 	{
-		item = await _int_makeOperable( target, meta );
-		await context.set( uuid, item );
-		const own_keys = Reflect.ownKeys( item );
-		for( const key of own_keys )
+		for( const idx in clone )
 		{
-			const sub_item: any = Reflect.get( item, key );
-			if ( typeof sub_item !== 'object' || !Reflect.has( sub_item, Serializable.CLASS ) ) continue; // Can only process objects which are serializable
-			
-			const meta = _int_getMetadataFor ( sub_item       );
-			const uuid = _int_getUuidFor     ( sub_item, meta );
+			const sub_item = clone[ idx ];
+			if ( !Array.isArray( sub_item ) && typeof sub_item !== 'object' ) continue; // Skip primitive types
 
-			// Replace the value in the item with a reference that will point to the sub value after it's added to the data provider
-			item[key] = { $$ref: uuid, $$type: meta.name };
-
-			// Await the results of dehydrating this sub reference.
-			let promise = pending.get( uuid );
-			if ( promise === undefined )
-			{
-				promise = Promise.resolve().then( () => _int_dehydrateRecursive( sub_item, context, pending ) );
-				pending.set( uuid, promise );
+			clone[idx] = null; // Reserve the spot, but remove the object while we process it to break potential cycles
+			let existing = pending.get( sub_item ) as Promise<T> | undefined;
+			if ( existing === undefined ) {
+				existing = dehydrate_recursive( sub_item, pending, ++indent );
 			}
+			pending.set(
+				sub_item,
+				existing.then( ( v ) => {
+					clone[idx] = v;
+
+					return v;
+				})
+			);
+		}
+	}
+	else if( typeof clone === 'object' )
+	{
+		for( const key of Reflect.ownKeys( clone ) )
+		{
+			const sub_item = Reflect.get( clone, key );
+			if ( !Array.isArray( sub_item ) && typeof sub_item !== 'object' ) 
+			{
+				continue;
+			}
+
+			Reflect.set( clone, key, null ); // Remove the item from the parent to break potential cycles
+
+			let existing = pending.get( sub_item ) as Promise<T> | undefined;
+			if ( existing === undefined ) {
+				existing = dehydrate_recursive( sub_item, pending, ++indent );
+			}
+			pending.set(
+				sub_item,
+				existing.then( ( v ) => {
+					Reflect.set( clone, key, v );
+					return v;
+				})
+			);
 		}
 	}
 
-	return item;
+	return clone;
 }
 
-// TODO: No custom hydrators/constructors are implemented yet.
-Serializable.Hydrate = async function<T extends Class>( target: SerializeTyped< JsonType< InstanceType<T> > >, dataProvider: DataProvider ): Promise< InstanceType<T> >
+Serializable.Dehydrate = async function<T extends object>( instance: T ): Promise<{ $$type: string, $$value: JsonType<T> }>
 {
 	const pending = new Map();
-	const context = new Map();
-
-	const hydrated = await _int_hydrateRecursive( target, dataProvider, context, pending );
-	await Promise.all( Array.from( pending.values() ) );
-
-	return hydrated;
-}
-async function _int_hydrateRecursive<T extends Class>( target: SerializeTyped< JsonType< InstanceType<T> > >, dataProvider: DataProvider, context?: Map<UuidType, any >, pending?: Map<UuidType, Promise<any>> ): Promise< InstanceType<T> >
-{
-	// First, construct an instance we will hydrate
-	const type = Serializable.REVERSE_LUT.get( target.$$type );
-	let instance;
-	try {
-		instance = Reflect.construct( type, [] );
-	}
-	catch( e )
+	const out = await dehydrate_recursive( instance, pending );
+	
+	// When using Promise.all( pending.values() ) the array is computed at the call. However, as the promises in `pending` execute, more promises get added to the map.
+	// Thus, we can't await a static array or anything that gets added more than a promise deep won't be awaited. Instead, use the nature of the iterator returned by
+	// `.values()` to continually iterate as long as new entries get added, awaiting each one in turn as it will add the next 
+	for( const process of pending.values() )
 	{
-		console.warn( `Hydrator failed to create instance for ${target.$$type}. Forcing with Object.create\n`, e );
-		instance = Object.create( type );
+		await process;
 	}
-	Object.assign( instance, target );
 
-	// Second, hydrate all sub members which need to be hydrated
-	const own_keys = Reflect.ownKeys( target );
-	for( const key of own_keys )
-	{
-		const sub_item = Reflect.get( instance, key );
-		if ( typeof sub_item !== 'object' || !("$$ref" in sub_item) ) continue;
-
-		Reflect.set( instance, key, undefined ); // Remove the reference
-
-		let promise = pending.get( sub_item.$$ref );
-		if ( promise === undefined ) {
-			promise = dataProvider.get( sub_item.$$ref ).then( ( sub_raw ) => {
-				return _int_hydrateRecursive( sub_raw, dataProvider, context, pending )
-			})
-			pending.set( sub_item.$$ref, promise )
-		}
-		promise.then( ( hydrated ) => {
-			Reflect.set( instance, key, hydrated );
-		})
-	}
-	delete instance.$$uuid;
-	delete instance.$$type;
-	return instance;
+	return out;
 }
 
-Serializable.HydrateFromUuid = async function<T extends Class>( uuid: string, dataProvider: DataProvider ): Promise<InstanceType<T>>
-{
-	return Serializable.Hydrate( await dataProvider.get( uuid ), dataProvider );
-}
+// // DO NOT CHANGE THIS YOU IDIOT
+// // Every time you touch the serialization code you spend a month re-writing it. Find another way to solve the issue and leave this as it stands!
+// // For example, want to make some properties ignored? TOO BAD, DO IT IN THE `toJSON`!
+// //              want to change something about the object asynchronously? DO IT IN THE DEHYDRATOR DECORATOR PARAMETER
+// Serializable.Dehydrate = async function<T extends Class, I extends InstanceType<T> = InstanceType<T>>( target: I, dataProvider: DataProvider ): Promise< SerializeTyped< JsonType<I> > >
+// {
+// 	const pending = new Map();
+// 	const context = new Map();
+
+// 	const dehydrated = await _int_dehydrateRecursive( target, context, pending );
+
+// 	await Promise.all( Array.from( pending.values() ) );
+
+// 	for( const item of await Promise.all( Array.from( pending.values() ) ) )
+// 	{
+// 		dataProvider.put( item.$$uuid, item );
+// 	}
+
+// 	const jsonified = JSON.parse( JSON.stringify( dehydrated ) );
+// 	dataProvider.put( dehydrated.$$uuid, jsonified );
+
+// 	return jsonified;
+// }
+// async function _int_dehydrateRecursive<T extends Class, I extends InstanceType<T> = InstanceType<T>>( target: Immutable<I>, context?: Map<UuidType, any >, pending?: Map<UuidType, Promise<any>> ): Promise< SerializeTyped< JsonType<I> > >
+// {
+// 	// Get metadata for the callee
+// 	const meta = _int_getMetadataFor( target );
+// 	if ( meta === undefined ) return target as SerializeTyped<JsonType<I>>; // Can't serialize types without metadata, return as is
+
+// 	const uuid = meta.uuidProvider ? meta.uuidProvider.call( target, target ) : _int_defaultUuidProvider.call( target, target );
+	
+// 	let item = context.get( uuid ) as JsonType<I>;
+// 	if ( item === undefined )
+// 	{
+// 		item = await _int_makeOperable( target, meta );
+// 		context.set( uuid, item );
+// 		const own_keys = Reflect.ownKeys( item );
+// 		for( const key of own_keys )
+// 		{
+// 			const sub_item: any = Reflect.get( item, key );
+// 			if ( typeof sub_item !== 'object' || !Reflect.has( sub_item, Serializable.CLASS ) ) continue; // Can only process objects which are serializable
+			
+// 			const meta = _int_getMetadataFor ( sub_item       );
+// 			const uuid = _int_getUuidFor     ( sub_item, meta );
+
+// 			// Replace the value in the item with a reference that will point to the sub value after it's added to the data provider
+// 			item[key] = { $$ref: uuid, $$type: meta.name };
+
+// 			// Await the results of dehydrating this sub reference.
+// 			let promise = pending.get( uuid );
+// 			if ( promise === undefined )
+// 			{
+// 				promise = Promise.resolve().then( () => _int_dehydrateRecursive( sub_item, context, pending ) );
+// 				pending.set( uuid, promise );
+// 			}
+// 		}
+// 	}
+
+// 	return item;
+// }
+
+// // TODO: No custom hydrators/constructors are implemented yet.
+// Serializable.Hydrate = async function<T extends Class>( target: SerializeTyped< JsonType< InstanceType<T> > >, dataProvider: DataProvider ): Promise< InstanceType<T> >
+// {
+// 	const pending = new Map();
+// 	const context = new Map();
+
+// 	const hydrated = await _int_hydrateRecursive( target, dataProvider, context, pending );
+// 	await Promise.all( Array.from( pending.values() ) );
+
+// 	return hydrated;
+// }
+// async function _int_hydrateRecursive<T extends Class>( target: SerializeTyped< JsonType< InstanceType<T> > >, dataProvider: DataProvider, context?: Map<UuidType, any >, pending?: Map<UuidType, Promise<any>> ): Promise< InstanceType<T> >
+// {
+// 	// First, construct an instance we will hydrate
+// 	const type = Serializable.REVERSE_LUT.get( target.$$type );
+// 	let instance;
+// 	try {
+// 		instance = Reflect.construct( type, [] );
+// 	}
+// 	catch( e )
+// 	{
+// 		console.warn( `Hydrator failed to create instance for ${target.$$type}. Forcing with Object.create\n`, e );
+// 		instance = Object.create( type );
+// 	}
+// 	Object.assign( instance, target );
+
+// 	// Second, hydrate all sub members which need to be hydrated
+// 	const own_keys = Reflect.ownKeys( target );
+// 	for( const key of own_keys )
+// 	{
+// 		const sub_item = Reflect.get( instance, key );
+// 		if ( typeof sub_item !== 'object' || !("$$ref" in sub_item) ) continue;
+
+// 		Reflect.set( instance, key, undefined ); // Remove the reference
+
+// 		let promise = pending.get( sub_item.$$ref );
+// 		if ( promise === undefined ) {
+// 			promise = dataProvider.get( sub_item.$$ref ).then( ( sub_raw ) => {
+// 				return _int_hydrateRecursive( sub_raw, dataProvider, context, pending )
+// 			})
+// 			pending.set( sub_item.$$ref, promise )
+// 		}
+// 		promise.then( ( hydrated ) => {
+// 			Reflect.set( instance, key, hydrated );
+// 		})
+// 	}
+// 	delete instance.$$uuid;
+// 	delete instance.$$type;
+// 	return instance;
+// }
+
+// Serializable.HydrateFromUuid = async function<T extends Class>( uuid: string, dataProvider: DataProvider ): Promise<InstanceType<T>>
+// {
+// 	return Serializable.Hydrate( await dataProvider.get( uuid ), dataProvider );
+// }
