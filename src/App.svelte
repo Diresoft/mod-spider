@@ -34,9 +34,16 @@
 	// 	globalProvider.put( 'plan', await Serializable.Dehydrate( get( plan ), globalProvider ) );
 	// }
 
-	@Serializable()
+	@Serializable({
+		uuidProvider( instance )
+		{
+			return `UUID:${instance.myVal}`;
+		}
+	})
 	class Foo {
 		public myVal = "Foo";
+		public myArr = [ "Fiz", "Baz", "Buz" ];
+		public myObj = { hello: "world", Bar: "Bim" };
 		public set = new Set();
 	}
 	async function addModFromURL( url: string )
@@ -61,8 +68,8 @@
 		console.log( `test_d`, test_d );
 		const test_s = JSON.stringify( test_d );
 		console.log( `test_s`, test_s );
-		// const test_h = await Serializable.Hydrate( test_d, globalProvider );
-		// console.log( `test_h`, test_h );
+		const test_h = await Serializable.Hydrate( test_d, globalProvider );
+		console.log( `test_h`, test_h );
 	}
 
 	let nexusmodsUrl: string = "https://www.nexusmods.com/skyrimspecialedition/mods/93962";
