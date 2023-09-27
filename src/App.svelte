@@ -15,61 +15,34 @@
 	$: plan_arr = $plan.allMods;
 	setContext( "plan", plan );
 
-	// onMount( async () => {
-	// 	await load();
-	// })
-	// onDestroy( async () => {
-	// 	await save();
-	// })
-
-	// async function load()
-	// {
-	// 	const hydrated = await Serializable.HydrateFromUuid( 'plan', globalProvider )
-	// 	console.log( `Loaded: `, hydrated );
-	// }
-
-	// async function save()
-	// {
-	// 	// Save plan to local storage
-	// 	globalProvider.put( 'plan', await Serializable.Dehydrate( get( plan ), globalProvider ) );
-	// }
-
-	@Serializable({
-		uuidProvider( instance )
-		{
-			return `UUID:${instance.myVal}`;
-		}
+	onMount( async () => {
+		await load();
 	})
-	class Foo {
-		public myVal = "Foo";
-		public myArr = [ "Fiz", "Baz", "Buz" ];
-		public myObj = { hello: "world", Bar: "Bim" };
-		public set = new Set();
+	onDestroy( async () => {
+		await save();
+	})
+
+	async function load()
+	{
+		const ref = { $$ref: 'plan', $$type: 'ModPlan' };
+		const hydrated = await Serializable.Hydrate( ref, globalProvider );
+		console.log( `Loaded: `, hydrated );
 	}
+
+	async function save()
+	{
+		// Save plan to local storage
+		globalProvider.put( 'plan', await Serializable.Dehydrate( get( plan ), globalProvider ) );
+	}
+
 	async function addModFromURL( url: string )
 	{
-		// const nmMod = new NxmMod( await NxmApi.getModInfo( url ) );
-		// plan.update( p => {
-		// 	p.add( nmMod )
-		// 	console.log( p );
-		// 	return p;
-		//  } );
-
-		const test = new Foo();
-		test.set.add( url );
-		const test2 = new Foo();
-		test2.myVal = 'Foo 2';
-		test2.set.add( "BOO" );
-		test2.set.add( test );
-		test.set.add( test2 );
-
-		console.log( `test`, test );
-		const test_d = await Serializable.Dehydrate( test, globalProvider );
-		console.log( `test_d`, test_d );
-		const test_s = JSON.stringify( test_d );
-		console.log( `test_s`, test_s );
-		const test_h = await Serializable.Hydrate( test_d, globalProvider );
-		console.log( `test_h`, test_h );
+		const nmMod = new NxmMod( await NxmApi.getModInfo( url ) );
+		plan.update( p => {
+			p.add( nmMod )
+			console.log( p );
+			return p;
+		 } );
 	}
 
 	let nexusmodsUrl: string = "https://www.nexusmods.com/skyrimspecialedition/mods/93962";
@@ -80,8 +53,8 @@
 
 	<input type="text" placeholder="Nexusmods URL" bind:value={nexusmodsUrl} />
 	<button on:click={() => addModFromURL(nexusmodsUrl)}>Add Mod</button>
-	<!-- <button on:click={() => save()}>Save</button>
-	<button on:click={() => load()}>Load</button> -->
+	<button on:click={() => save()}>Save</button>
+	<button on:click={() => load()}>Load</button>
 
 	{#each plan_arr as mod }
 		<article>

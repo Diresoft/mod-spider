@@ -1,6 +1,10 @@
-import { Serializable } from "./Serialize";
+import { Serializable, type Immutable } from "./Serialize";
 
-@Serializable()
+@Serializable({
+	async dehydrator( instance: Immutable<ModLink> ): Promise<any> {
+		return { ref_uuid: this.ref_uuid };
+	}
+})
 export class ModLink<T extends Mod=Mod>
 {
 	public readonly ref_uuid: string;
@@ -16,14 +20,14 @@ export class ModLink<T extends Mod=Mod>
 		this.ref_uuid = ref_uuid;
 		this.ref = ref;
 	}
-
-	toJSON()
-	{
-		return { ref_uuid: this.ref_uuid }
-	}
 }
 
-@Serializable()
+@Serializable({
+	uuidProvider( instance: Immutable<Mod> ): string
+	{
+		return instance.uuid;
+	}
+})
 export class Mod
 {
 	public readonly uuid: string;

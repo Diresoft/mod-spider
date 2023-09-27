@@ -33,7 +33,11 @@ export class NxmMod extends Mod
 	{
 		super( nmInfo.url );
 
-		Object.assign( this, nmInfo );
+		this.title = nmInfo.title;
+		this.image = nmInfo.image;
+		this.url   = nmInfo.url;
+		this.nxmId = nmInfo.nxmId;
+
 		for( const [i, requirement] of nmInfo.requirements.entries() )
 		{
 			this.requirements[ i ] = new NxmModLink( requirement.link )
