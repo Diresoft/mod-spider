@@ -1,12 +1,12 @@
 <script lang="ts">
     import { get, writable } from "svelte/store";
-    import { Mod } from "./lib/Mod";
-    import { NxmApi, NxmMod } from "./adapter/Nexusmods";
+    import { Mod } from "../lib/Mod";
+    import { NxmApi, NxmMod } from "../adapter/Nexusmods";
     import { onDestroy, onMount, setContext } from "svelte";
-    import { scopedStorage, scopedStorageDataProvider } from "./adapter/scopedLocalStorage";
-    import { ModPlan } from "./lib/Plan";
-    import { Database } from "./lib/db";
-    import { Serializable } from "./lib/Serialize";
+    import { scopedStorage, scopedStorageDataProvider } from "../adapter/scopedLocalStorage";
+    import { ModPlan } from "../lib/Plan";
+    import { Database } from "../lib/db";
+    import { Serializable } from "../lib/Serialize";
 
 	// Add the loaded plan to the context
 	const plan = writable( new ModPlan() );

@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import { svelte } from "@sveltejs/vite-plugin-svelte";
+import { sveltekit } from '@sveltejs/kit/vite';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 // https://vitejs.dev/config/
@@ -10,7 +10,7 @@ export default defineConfig(async () => ({
 				process: true
 			}
 		}),
-		svelte()
+		sveltekit()
 	],
 
 	// Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
@@ -19,7 +19,7 @@ export default defineConfig(async () => ({
 	clearScreen: false,
 	// 2. tauri expects a fixed port, fail if that port is not available
 	server: {
-		port: 1420,
+		port: 5173,
 		strictPort: true,
 	},
 	// 3. to make use of `TAURI_DEBUG` and other env variables

@@ -1,0 +1,9 @@
+{
+"svelte.enable-ts-plugin": true,
+"cSpell.words": [
+	"clearfix",
+	"luxon",
+	"modlink",
+	"runscripts"
+]
+}
