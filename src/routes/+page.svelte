@@ -7,11 +7,16 @@
     import { ModPlan } from "../lib/Plan";
     import { Database } from "../lib/db";
     import { Serializable } from "../lib/Serialize";
+    import ModView from "./compontents/ModView.svelte";
 
 	// Add the loaded plan to the context
 	const plan = writable( new ModPlan() );
-	$: plan_arr = $plan.allMods;
-	setContext( "plan", plan );
+
+	let plan_arr: Mod[] = [];
+	$: {
+		plan_arr = $plan.allMods;
+		setContext( "plan", plan );
+	}
 
 	onMount( async () => {
 		await load();
@@ -59,24 +64,7 @@
 	<button on:click={() => load()}>Load</button>
 
 	{#each plan_arr as mod }
-		<article>
-			<header>
-				<h1>{mod.title}</h1>
-			</header>
-			<section>
-				<h2>Requirements:</h2>
-				<ul>
-					{#each mod.requirements as requirement }
-						{@const promise = requirement.get()}
-						{#await promise}
-							<li>{requirement.ref_uuid} -LOADING</li>
-						{:then req_mod} 
-							<li>{req_mod.title}</li>
-						{/await}
-					{/each}
-				</ul>
-			</section>
-		</article>
+		<ModView {mod} />
 	{/each}
 
 </main>

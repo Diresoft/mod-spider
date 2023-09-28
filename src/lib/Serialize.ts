@@ -141,12 +141,22 @@ Serializable({
 	async dehydrator( hydrated: Immutable<Set<unknown>> ) {
 		return Array.from( hydrated.values() )
 	},
-	async hydrator( dehydrated: Array<unknown> ): Promise< Set<unknown> >
+	async hydrator( dehydrated: unknown[] ): Promise< Set<unknown> >
 	{
 		return new Set( dehydrated );
 	}
 })(Set, null);
 
+// # Map
+// Serializes to an array of entries. Deserializes back into a Map from the array content.
+Serializable({
+	async dehydrator( hydrated: Immutable<Map<unknown, unknown>> ) {
+		return Array.from( hydrated.entries() );
+	},
+	async hydrator( dehydrated: [keyof any, unknown][] ) {
+		return new Map( dehydrated );
+	}
+})(Map, null);
 
 // === DEHYDRATE ===
 
@@ -329,48 +339,119 @@ async function _int_hydrateRecursive( raw_item: { $$type: string, $$val?: any, $
 		}
 	}
 
+	const processValue = ( value: any, sub_item_promises: Promise<any>[], inner_depth: number = 1 ) => {
+		
+		// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};0.a -> Processing Value`, raw_item )
+
+		if ( typeof value !== 'object' && !Array.isArray( value ) )
+		{
+			// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};1.a -> Raw value not transformable`, raw_item )
+			// Do Nothing - Type will not be transformed
+		}
+		else if ( Array.isArray( value ) )
+		{
+			// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};1.b -> Base value is array`, raw_item )
+			// Iterate Array to find sub-hydratable types
+			for( const [idx, sub_item] of value.entries() )
+			{
+				if ( sub_item === null || typeof sub_item !== 'object' || !Reflect.has( sub_item, "$$type") )
+				{
+					// IF I'M AN ARRAY I NEED TO DO THIS WHOLE BIT AGAIN UNTIL I'M NOT
+					// HOWEVER, I MIGHT NOT BE A HYDRATABLE TYPE, SO I CAN'T JUST CALL THE WHOLE SHEBANG AGAIN.
+					// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};1.b.i -> Array item not hydratable`, idx, sub_item, typeof sub_item );
+					processValue( sub_item, sub_item_promises, ++inner_depth );
+					continue;
+				}
+	
+				value[ idx ] = null; // Prevent other references to this from walking into this object
+				// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};1.b.ii -> Hydrating item from array`, idx, sub_item )
+	
+				sub_item_promises.push( _int_hydrateRecursive( sub_item, seen, depth + 1 ).then( (v) => {
+					// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};1.b.ii;1 -> Finished Sub item hydrate`, sub_item, idx, v )
+					value[ idx ] = v;
+					return v;
+				}));
+			}
+		}
+		else
+		{
+			// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};1.c -> Base value is object`, raw_item )
+			// Iterate Object Keys to find sub-hydratable types
+			for( const key of Reflect.ownKeys( value ) )
+			{
+				const sub_item = Reflect.get( value, key );
+				if ( typeof sub_item !== 'object' || !Reflect.has( sub_item, "$$type") )
+				{
+					// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};1.c.i -> item from object not hydratable`, key, sub_item )
+					processValue( sub_item, sub_item_promises, ++inner_depth );
+					continue;
+				}
+	
+				// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};1.c.ii -> Hydrating item from object`, key, sub_item )
+				sub_item_promises.push( _int_hydrateRecursive( sub_item, seen, depth + 1 ).then( (v) =>{
+					// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};1.c -> finished sub item hydrate`, sub_item, key, v )
+					Reflect.set( value, key, v );
+					return v;
+				}));
+			}
+		}
+	}
+
 	// Next, hydrate any sub references made in these objects
 	// The raw item should be either a primitive, object, or an array. So we can handle those edge cases easily
 	const { $$val: value } = raw_item; // Grab the value now, since we'll have retrieved it if needed
-	const sub_item_promises = [];
-	if ( typeof value !== 'object' && !Array.isArray( value ) )
-	{
-		// Do Nothing - Type will not be transformed
-	}
-	else if ( Array.isArray( value ) )
-	{
-		// Iterate Array to find sub-hydratable types
-		for( const [idx, sub_item] of value.entries() )
-		{
-			if ( sub_item === null || typeof sub_item !== 'object' || !Reflect.has( sub_item, "$$type") )
-			{
-				continue;
-			}
+	const sub_item_promises: Promise<any>[] = [];
+	processValue( value, sub_item_promises );
+	// if ( typeof value !== 'object' && !Array.isArray( value ) )
+	// {
+	// 	console.log( `_int_hydrateRecursive ::D${depth};1.a -> Raw value not transformable`, raw_item )
+	// 	// Do Nothing - Type will not be transformed
+	// }
+	// else if ( Array.isArray( value ) )
+	// {
+	// 	console.log( `_int_hydrateRecursive ::D${depth};1.b -> Base value is array`, raw_item )
+	// 	// Iterate Array to find sub-hydratable types
+	// 	for( const [idx, sub_item] of value.entries() )
+	// 	{
+	// 		if ( sub_item === null || typeof sub_item !== 'object' || !Reflect.has( sub_item, "$$type") )
+	// 		{
+	// 			// IF I'M AN ARRAY I NEED TO DO THIS WHOLE BIT AGAIN UNTIL I'M NOT
+	// 			// HOWEVER, I MIGHT NOT BE A HYDRATABLE TYPE, SO I CAN'T JUST CALL THE WHOLE SHEBANG AGAIN.
+	// 			console.log( `_int_hydrateRecursive ::D${depth};1.b.i -> Array item not hydratable`, idx, sub_item, typeof sub_item )
+	// 			continue;
+	// 		}
 
-			value[ idx ] = null; // Prevent other references to this from walking into this object
-			sub_item_promises.push( _int_hydrateRecursive( sub_item, seen, depth + 1 ).then( (v) =>{
-				value[ idx ] = v;
-				return v;
-			}));
-		}
-	}
-	else
-	{
-		// Iterate Object Keys to find sub-hydratable types
-		for( const key of Reflect.ownKeys( value ) )
-		{
-			const sub_item = Reflect.get( value, key );
-			if ( typeof sub_item !== 'object' || !Reflect.has( sub_item, "$$type") )
-			{
-				continue;
-			}
+	// 		value[ idx ] = null; // Prevent other references to this from walking into this object
+	// 		console.log( `_int_hydrateRecursive ::D${depth};1.b.ii -> Hydrating item from array`, idx, sub_item )
 
-			sub_item_promises.push( _int_hydrateRecursive( sub_item, seen, depth + 1 ).then( (v) =>{
-				Reflect.set( value, key, v );
-				return v;
-			}));
-		}
-	}
+	// 		sub_item_promises.push( _int_hydrateRecursive( sub_item, seen, depth + 1 ).then( (v) => {
+	// 			console.log( `_int_hydrateRecursive ::D${depth};1.b.ii;1 -> Finished Sub item hydrate`, sub_item, idx, v )
+	// 			value[ idx ] = v;
+	// 			return v;
+	// 		}));
+	// 	}
+	// }
+	// else
+	// {
+	// 	console.log( `_int_hydrateRecursive ::D${depth};1.c -> Base value is object`, raw_item )
+	// 	// Iterate Object Keys to find sub-hydratable types
+	// 	for( const key of Reflect.ownKeys( value ) )
+	// 	{
+	// 		const sub_item = Reflect.get( value, key );
+	// 		if ( typeof sub_item !== 'object' || !Reflect.has( sub_item, "$$type") )
+	// 		{
+	// 			console.log( `_int_hydrateRecursive ::D${depth};1.c.i -> item from object not hydratable`, key, sub_item )
+	// 			continue;
+	// 		}
+
+	// 		console.log( `_int_hydrateRecursive ::D${depth};1.c.ii -> Hydrating item from object`, key, sub_item )
+	// 		sub_item_promises.push( _int_hydrateRecursive( sub_item, seen, depth + 1 ).then( (v) =>{
+	// 			console.log( `_int_hydrateRecursive ::D${depth};1.c -> finished sub item hydrate`, sub_item, key, v )
+	// 			Reflect.set( value, key, v );
+	// 			return v;
+	// 		}));
+	// 	}
+	// }
 
 	await Promise.all( sub_item_promises );
 

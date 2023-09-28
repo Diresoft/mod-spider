@@ -1,4 +1,4 @@
-import type { Mod } from "./Mod";
+import { Mod } from "./Mod";
 import { Serializable, type Immutable } from "./Serialize";
 
 @Serializable({
@@ -8,17 +8,22 @@ import { Serializable, type Immutable } from "./Serialize";
 })
 export class ModPlan
 {
-	protected mods: Set<Mod> = new Set();
+	protected mods: Map<string, Mod> = new Map();
 
 	public get allMods(): Mod[]
 	{
-		return Array.from( this.mods );
+		return Array.from( this.mods.values() );
 	}
 	constructor() { }
 	
 	public add( mod: Mod ): ModPlan
 	{
-		this.mods.add( mod );
+		this.mods.set( mod.uuid, mod );
 		return this;
+	}
+	public has( mod: Mod|string ): boolean
+	{
+		const uuid = mod instanceof Mod ? mod.uuid : mod;
+		return this.mods.has( uuid );
 	}
 }
