@@ -38,28 +38,40 @@ export type SerializeTyped<T=any> = { $$ref: string, $$type: string, $$val?: Imm
 export type UuidType                       = string;
 export type UuidProvider <T extends Class> = ( instance: Immutable< InstanceType<T> > ) => UuidType;
 
-export type TypeConstructor < T extends Class >                 = ( dehydrated : SerializeTyped<JsonType> ) => InstanceType< T >;
-
 export type Dehydrator < T, DT = any > = ( hydrated  : Immutable<T>  ) => Promise< DT >;
 export type Hydrator   < T, DT = any > = ( dehydrated: DT            ) => Promise< T  >;
-
-export type SerializableInfo<T extends Class, DT = any > = {
-	class:       Class<T>
-	name:        string
-
-	typeConstructor  ?: TypeConstructor< InstanceType<T> >
-	uuidProvider ?: UuidProvider<T>
-	dehydrator   ?: Dehydrator<InstanceType<T>, DT>
-	hydrator     ?: Hydrator  <InstanceType<T>, DT>
-}
-
-// == Serialization Types ==
 
 export interface DataProvider {
 	has   ( uuid: string                                      ): Promise<boolean>;
 	put   ( uuid: string, data: SerializeTyped< JsonType >    ): Promise<void>;
 	get<T>( uuid: string                                      ): Promise< SerializeTyped< JsonType<T> > >;
 }
+export class localStorageDataProvider implements DataProvider {
+	public async has(uuid: string): Promise<boolean> {
+		return localStorage.getItem( uuid ) !== null;
+	}
+	public async put(uuid: string, data: SerializeTyped<any>): Promise<void> {
+		if ( data.$$dp !== undefined ) throw new Error( `HAD DP` );
+		return localStorage.setItem( uuid, JSON.stringify( data ) );
+	}
+	public async get<T>(uuid: string): Promise<SerializeTyped<JsonType<T>>> {
+		return JSON.parse( localStorage.getItem( uuid ) );
+	}
+}
+export const defaultDataProvider = new localStorageDataProvider();
+
+
+export type SerializableInfo<T extends Class, DT = any > = {
+	class:       Class<T>
+	name:        string
+
+	uuidProvider     ?: UuidProvider<T>
+	dehydrator       ?: Dehydrator<InstanceType<T>, DT>
+	hydrator         ?: Hydrator  <InstanceType<T>, DT>
+	dataProvider     : DataProvider
+}
+
+// == Serialization Types ==
 
 
 // == Internal utility and fallback functions ==
@@ -68,12 +80,11 @@ function _int_getMetadataFor<T extends Class>( target: InstanceType<T> ): Serial
 	const out = {
 		class:           Reflect.get( target, Serializable.CLASS         ),
 		name:            Reflect.get( target, Serializable.TYPENAME      ),
-		typeConstructor: Reflect.get( target, Serializable.CONSTRUCTOR   ),
 		uuidProvider:    Reflect.get( target, Serializable.UUID_PROVIDER ),
 		dehydrator:      Reflect.get( target, Serializable.DEHYDRATOR    ),
 		hydrator:        Reflect.get( target, Serializable.HYDRATOR      ),
+		dataProvider:    Reflect.get( target, Serializable.DATA_PROVIDER ) ?? defaultDataProvider
 	}
-	console.log( `Got metadata for: `, target, out );
 	return out;
 }
 
@@ -85,20 +96,20 @@ export function Serializable<T extends Class>( options?: Partial< SerializableIn
 		Reflect.set( target.prototype, Serializable.CLASS        , target                );
 		Reflect.set( target.prototype, Serializable.TYPENAME     , target.name           );
 		
-		// Only set these on the prototype if they're defined for this object.
-		if ( options?.typeConstructor !== undefined ) Reflect.set( target.prototype, Serializable.CONSTRUCTOR  , options.typeConstructor  );
+		// Only set these on the prototype if they're defined for this object. Even if they're set as undefined later lookups won't walk the prototype tree like we need them to.
 		if ( options?.uuidProvider    !== undefined ) Reflect.set( target.prototype, Serializable.UUID_PROVIDER, options.uuidProvider     );
 		if ( options?.dehydrator      !== undefined ) Reflect.set( target.prototype, Serializable.DEHYDRATOR   , options.dehydrator       );
 		if ( options?.hydrator        !== undefined ) Reflect.set( target.prototype, Serializable.HYDRATOR     , options.hydrator         );
+		if ( options?.dataProvider    !== undefined ) Reflect.set( target.prototype, Serializable.DATA_PROVIDER, options.dataProvider     );
 
 		// I'm ignoring toJSON for now.
 
 		Serializable.REVERSE_LUT.set( target.name, target );
-		if ( !target.prototype[ Serializable.UUID_PROVIDER ] || options?.uuidProvider === undefined )
-		{
-			console.warn( `\`${target.name}\` has no UUID provider. Items of this type will not be stored externally`, target.prototype, target.prototype[ Serializable.UUID_PROVIDER ] );
-		}
-		console.log( `@Serializable -> ${target.name}`, target.prototype );
+		// if ( !target.prototype[ Serializable.UUID_PROVIDER ] || options?.uuidProvider === undefined )
+		// {
+		// 	console.warn( `\`${target.name}\` has no UUID provider. Items of this type will not be stored externally`, target.prototype, target.prototype[ Serializable.UUID_PROVIDER ] );
+		// }
+		//console.log( `@Serializable -> ${target.name}`, target.prototype );
 	}
 }
 
@@ -108,14 +119,19 @@ export function Serializable<T extends Class>( options?: Partial< SerializableIn
 // i.e. you can change one of these in a subclass without having to handle the whole metadata object as a change
 Serializable.CLASS         = Symbol( "@@Serializable::CLASS"         );
 Serializable.TYPENAME      = Symbol( "@@Serializable::TYPENAME"      );
-// Serializable.TO_JSON       = Symbol( "@@Serializable::TO_JSON"       );
-Serializable.CONSTRUCTOR   = Symbol( "@@Serializable::CONSTRUCTOR"   );
 Serializable.HYDRATOR      = Symbol( "@@Serializable::HYDRATOR"      );
 Serializable.DEHYDRATOR    = Symbol( "@@Serializable::DEHYDRATOR"    );
 Serializable.UUID_PROVIDER = Symbol( "@@Serializable::UUID_PROVIDER" );
+Serializable.DATA_PROVIDER = Symbol( "@@Serializable::DATA_PROVIDER" );
 
 // Provide a static reverse LUT for hydrating from the type name
 Serializable.REVERSE_LUT = new Map<string, Class>();
+
+// == Serializer Helpers ==
+Serializable.GetDataProviderFor = function ( target: object ): DataProvider
+{
+	return Reflect.get( target, Serializable.DATA_PROVIDER ) ?? defaultDataProvider;
+}
 
 // == CORE TYPE SERIALIZER DATA ==
 
@@ -171,7 +187,7 @@ async function make_operable<T>( original: T ): Promise< JsonType<T> >
 }
 
 export type SerializedReference = { $$ref: string, $$type: string                 };
-       type _int_dehydrated<T>  = { $$val: T     , $$ref?: string, $$type: string };
+       type _int_dehydrated<T>  = { $$val: T     , $$ref?: string, $$type: string, $$dp?: DataProvider };
 async function dehydrate_recursive<T>( item, pending: Map<unknown, Promise<_int_dehydrated<unknown>>>, external: Set<_int_dehydrated<any>>, depth: number = 0 ): Promise<_int_dehydrated<T>>
 {
 	if ( pending.has( item ) )
@@ -196,8 +212,9 @@ async function dehydrate_recursive<T>( item, pending: Map<unknown, Promise<_int_
 					if ( "$$ref" in data )
 					{
 						// Need to add this item to the list of items to write, but we can't serialize it until all promises resolve
-						external.add( { $$ref: data.$$ref, $$val: data.$$val, $$type: data.$$type } );
+						external.add( { $$ref: data.$$ref, $$val: data.$$val, $$type: data.$$type, $$dp: data.$$dp } );
 						delete data.$$val;
+						delete data.$$dp;
 					}
 					return data;
 				});
@@ -241,8 +258,9 @@ async function dehydrate_recursive<T>( item, pending: Map<unknown, Promise<_int_
 					if ( "$$ref" in data )
 					{
 						// Need to add this item to the list of items to write, but we can't serialize it until all promises resolve
-						external.add( { $$ref: data.$$ref, $$val: data.$$val, $$type: data.$$type } );
+						external.add( { $$ref: data.$$ref, $$val: data.$$val, $$type: data.$$type, $$dp: data.$$dp } );
 						delete data.$$val;
+						delete data.$$dp;
 					}
 					return data;
 				});
@@ -260,11 +278,11 @@ async function dehydrate_recursive<T>( item, pending: Map<unknown, Promise<_int_
 		const meta = _int_getMetadataFor( item );
 		if ( meta.name         === undefined ) return clone; // If we don't have a name for the type, it must not be a special type
 		if ( meta.uuidProvider === undefined ) return { $$val: clone, $$type: meta.name } // No UUID provider means we're storing the value in the type itself
-		else                                   return { $$val: clone, $$type: meta.name, $$ref: meta.uuidProvider( item ) } // Value will be deleted prior to pushing to data provider
+		else                                   return { $$val: clone, $$type: meta.name, $$ref: meta.uuidProvider( item ), $$dp: meta.dataProvider } // Value will be deleted prior to pushing to data provider
 	}
 }
 
-Serializable.Dehydrate = async function<T extends object>( instance: T, dataProvider: DataProvider ): Promise<SerializeTyped<T>>
+Serializable.Dehydrate = async function<T extends object>( instance: T ): Promise<SerializeTyped<T>>
 {
 	const pending  = new Map();
 	const external: Set<_int_dehydrated<any>> = new Set();
@@ -281,26 +299,31 @@ Serializable.Dehydrate = async function<T extends object>( instance: T, dataProv
 	// Now that all of the promises have completed, we can add all the resulting objects to the data provider
 	for( const ext of external.values() )
 	{
-		dataProvider.put( ext.$$ref, { $$type: ext.$$type, $$val: ext.$$val } as SerializeTyped);
+		ext.$$dp.put( ext.$$ref, { $$type: ext.$$type, $$val: ext.$$val } as SerializeTyped);
 	}
+
+	delete out.$$dp;
 
 	return out;
 }
 
 
-async function _int_hydrateRecursive( raw_item: { $$type: string, $$val?: any, $$ref?: string }, dataProvider: DataProvider, seen: Map<string, any>, depth: number = 0 ): Promise<any>
+async function _int_hydrateRecursive( raw_item: { $$type: string, $$val?: any, $$ref?: string }, seen: Map<string, any>, depth: number = 0 ): Promise<any>
 {
+	const { $$type: type, $$ref: ref } = raw_item; // Only grab the ref and type now, since we might not have a value until we pull from the data provider
+	const meta = _int_getMetadataFor( Serializable.REVERSE_LUT.get( type ).prototype );
+
 	// Retrieve the raw item if working with a reference object
 	if ( Reflect.has( raw_item, "$$ref" ) )
 	{
-		const ref = raw_item.$$ref;
+		const ref  = raw_item.$$ref;
 		if( seen.has( ref ) )
 		{
 			raw_item = seen.get( ref );
 		}
 		else
 		{
-			raw_item = await dataProvider.get( ref );
+			raw_item = await meta.dataProvider.get( ref );
 			if ( raw_item === null ) return raw_item;
 			seen.set( ref, raw_item );
 		}
@@ -308,7 +331,7 @@ async function _int_hydrateRecursive( raw_item: { $$type: string, $$val?: any, $
 
 	// Next, hydrate any sub references made in these objects
 	// The raw item should be either a primitive, object, or an array. So we can handle those edge cases easily
-	const { $$type: type, $$val: value, $$ref: ref } = raw_item;
+	const { $$val: value } = raw_item; // Grab the value now, since we'll have retrieved it if needed
 	const sub_item_promises = [];
 	if ( typeof value !== 'object' && !Array.isArray( value ) )
 	{
@@ -325,7 +348,7 @@ async function _int_hydrateRecursive( raw_item: { $$type: string, $$val?: any, $
 			}
 
 			value[ idx ] = null; // Prevent other references to this from walking into this object
-			sub_item_promises.push( _int_hydrateRecursive( sub_item, dataProvider, seen, depth + 1 ).then( (v) =>{
+			sub_item_promises.push( _int_hydrateRecursive( sub_item, seen, depth + 1 ).then( (v) =>{
 				value[ idx ] = v;
 				return v;
 			}));
@@ -342,7 +365,7 @@ async function _int_hydrateRecursive( raw_item: { $$type: string, $$val?: any, $
 				continue;
 			}
 
-			sub_item_promises.push( _int_hydrateRecursive( sub_item, dataProvider, seen, depth + 1 ).then( (v) =>{
+			sub_item_promises.push( _int_hydrateRecursive( sub_item, seen, depth + 1 ).then( (v) =>{
 				Reflect.set( value, key, v );
 				return v;
 			}));
@@ -352,7 +375,6 @@ async function _int_hydrateRecursive( raw_item: { $$type: string, $$val?: any, $
 	await Promise.all( sub_item_promises );
 
 	// Next, transform the type based on the hydrator
-	const meta = _int_getMetadataFor( Serializable.REVERSE_LUT.get( type ).prototype );
 	const out = meta.hydrator ? await meta.hydrator( raw_item.$$val ) : Object.assign( Object.create( meta.class.prototype ), raw_item.$$val );
 
 	if ( ref !== undefined )
@@ -363,8 +385,8 @@ async function _int_hydrateRecursive( raw_item: { $$type: string, $$val?: any, $
 	return out;
 }
 
-Serializable.Hydrate = async function<T extends object>( serialized: { $$ref: string, $$type: string }, dataProvider: DataProvider ): Promise<T>
+Serializable.Hydrate = async function<T extends object>( serialized: { $$ref: string, $$type: string } ): Promise<T>
 {
-	const out = await _int_hydrateRecursive( serialized, dataProvider, new Map() );
+	const out = await _int_hydrateRecursive( serialized, new Map() );
 	return out;
 }

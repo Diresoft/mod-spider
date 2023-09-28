@@ -8,8 +8,6 @@
     import { Database } from "./lib/db";
     import { Serializable } from "./lib/Serialize";
 
-	const globalProvider = new scopedStorageDataProvider( '' );
-
 	// Add the loaded plan to the context
 	const plan = writable( new ModPlan() );
 	$: plan_arr = $plan.allMods;
@@ -24,22 +22,26 @@
 
 	async function load()
 	{
-		const ref = { $$ref: 'plan', $$type: 'ModPlan' };
-		const hydrated = await Serializable.Hydrate( ref, globalProvider );
-		console.log( `Loaded: `, hydrated );
+		const loaded_plan = await Database.get( 'plan', ModPlan );
+		console.log( `Loaded: `, loaded_plan );
+		if ( loaded_plan instanceof ModPlan )
+		{
+			plan.set( loaded_plan );
+		}
 	}
 
 	async function save()
 	{
 		// Save plan to local storage
-		globalProvider.put( 'plan', await Serializable.Dehydrate( get( plan ), globalProvider ) );
+		const plan_id = await Database.put( get( plan ) );
+		console.log( `Saved: `, plan_id, get( plan ) );
 	}
 
 	async function addModFromURL( url: string )
 	{
-		const nmMod = new NxmMod( await NxmApi.getModInfo( url ) );
+		const nxmMod = new NxmMod( await NxmApi.getModInfo( url ) );
 		plan.update( p => {
-			p.add( nmMod )
+			p.add( nxmMod )
 			console.log( p );
 			return p;
 		 } );

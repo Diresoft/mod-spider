@@ -6,7 +6,7 @@ import { DateTime, Duration } from 'luxon';
 import { scopedStorage } from "./scopedLocalStorage";
 
 
-export const nexusmodsStorage = scopedStorage.scope( "NEXUSMODS" );
+export const nexusmodsStorage = scopedStorage.scope( "nxmInfo" );
 
 /** All information scraped off a Nexusmods Mod Page */
 type NxmModInfo = {
@@ -33,14 +33,15 @@ export class NxmMod extends Mod
 	{
 		super( nmInfo.url );
 
-		this.title = nmInfo.title;
-		this.image = nmInfo.image;
-		this.url   = nmInfo.url;
-		this.nxmId = nmInfo.nxmId;
+		this.title       = nmInfo.title;
+		this.description = nmInfo.description;
+		this.image       = nmInfo.image;
+		this.url         = nmInfo.url;
+		this.nxmId       = nmInfo.nxmId;
 
 		for( const [i, requirement] of nmInfo.requirements.entries() )
 		{
-			this.requirements[ i ] = new NxmModLink( requirement.link )
+			this.requirements.add( new NxmModLink( requirement ) );
 		}
 	}
 }
@@ -49,7 +50,7 @@ export class NxmMod extends Mod
 @Serializable()
 export class NxmModLink extends ModLink<NxmMod>
 {
-	public notes: string;
+	public note: string;
 	public async get(): Promise<NxmMod>
 	{
 		if( this.ref === undefined )
@@ -58,6 +59,12 @@ export class NxmModLink extends ModLink<NxmMod>
 			this.ref = new NxmMod( info );
 		}
 		return this.ref;
+	}
+
+	constructor( link_info: { link: string, note: string } )
+	{
+		super( link_info.link)
+		this.note = link_info.note;
 	}
 }
 
@@ -78,12 +85,11 @@ class NxmApiSingleton
 	}
 	protected loadCached( url: string ): NxmModInfo | undefined
 	{
-		let cached = undefined//NxmApiSingleton.info_lut.get( url ); // Check the runtime LUT first
+		let cached = NxmApiSingleton.info_lut.get( url ); // Check the runtime LUT first
 
 		// Try and revive from localStorage if it wasn't in the runtime LUT
 		if ( cached === undefined )
 		{
-			console.log( `info_lut cache miss for: ${url}` );
 			const raw = nexusmodsStorage.getItem( url );
 			if ( raw !== null )
 			{
