@@ -373,7 +373,7 @@ async function _int_hydrateRecursive( item: any, seen: Map<string, any>, depth: 
 		else
 		{
 			console.log( `ALREADY PROCESSING ITEM WITH REF:`, ref );
-			return item;
+			return item.$$value;
 		}
 	}
 	const value = item.$$value;
