@@ -19,10 +19,10 @@
 	}
 
 	onMount( async () => {
-		await load();
+		//await load();
 	})
 	onDestroy( async () => {
-		await save();
+		//await save();
 	})
 
 	async function load()
@@ -52,7 +52,8 @@
 		 } );
 	}
 
-	let nexusmodsUrl: string = "https://www.nexusmods.com/skyrimspecialedition/mods/93962";
+	let nexusmodsUrl: string = "https://www.nexusmods.com/skyrimspecialedition/mods/86492";
+	// let nexusmodsUrl: string = "https://www.nexusmods.com/skyrimspecialedition/mods/93962";
 	// let nexusmodsUrl: string = "https://www.nexusmods.com/skyrimspecialedition/mods/32444";
 </script>
 
@@ -63,11 +64,18 @@
 	<button on:click={() => save()}>Save</button>
 	<button on:click={() => load()}>Load</button>
 
-	{#each plan_arr as mod }
-		<ModView {mod} />
-	{/each}
+	<mods>
+		{#each plan_arr as mod }
+			<ModView {mod} />
+		{/each}
+	</mods>
 
 </main>
 
-<style>
+<style lang='scss'>
+	mods {
+		width: 500px;
+		display: flex;
+		flex-direction: column;
+	}
 </style>

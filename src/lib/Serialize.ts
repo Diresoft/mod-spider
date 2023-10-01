@@ -33,7 +33,7 @@ T extends (infer R)[]
 
 // == Serialization Utility Types ==
 
-export type SerializeTyped<T=any> = { $$ref: string, $$type: string, $$val?: Immutable<T> };
+export type SerializeTyped<T=any> = { $$type: string, $$value?: Immutable<T> };
 
 export type UuidType                       = string;
 export type UuidProvider <T extends Class> = ( instance: Immutable< InstanceType<T> > ) => UuidType;
@@ -51,11 +51,15 @@ export class localStorageDataProvider implements DataProvider {
 		return localStorage.getItem( uuid ) !== null;
 	}
 	public async put(uuid: string, data: SerializeTyped<any>): Promise<void> {
-		if ( data.$$dp !== undefined ) throw new Error( `HAD DP` );
 		return localStorage.setItem( uuid, JSON.stringify( data ) );
 	}
 	public async get<T>(uuid: string): Promise<SerializeTyped<JsonType<T>>> {
-		return JSON.parse( localStorage.getItem( uuid ) );
+		const raw = localStorage.getItem( uuid );
+		if( raw === null ) throw new Error( `Item not found in localStorage: \`${uuid}\`` );
+		else
+		{
+			return JSON.parse( raw );
+		}
 	}
 }
 export const defaultDataProvider = new localStorageDataProvider();
@@ -196,278 +200,261 @@ async function make_operable<T>( original: T ): Promise< JsonType<T> >
 	return clone;
 }
 
-export type SerializedReference = { $$ref: string, $$type: string                 };
-       type _int_dehydrated<T>  = { $$val: T     , $$ref?: string, $$type: string, $$dp?: DataProvider };
-async function dehydrate_recursive<T>( item, pending: Map<unknown, Promise<_int_dehydrated<unknown>>>, external: Set<_int_dehydrated<any>>, depth: number = 0 ): Promise<_int_dehydrated<T>>
+async function _int_dehydrateRecursive( item: any, external: Map<string, any>, seen: Map<any, Promise<any>> = new Map(), depth: number = 0 ): Promise<any>
 {
-	if ( pending.has( item ) )
+	const original = item;
+	const meta = _int_getMetadataFor( item );
+	// console.log( `_int_dehydrateRecursive ::D${depth};1 -> Dehydrating\n`, item, meta )
+
+	// If we have a dehydrator, run it now so we're working on the simplest types
+	if( meta.dehydrator !== undefined )
 	{
-		console.log( `Already seen item. Returning existing pending operation`, item );
-		return pending.get( item ) as Promise<_int_dehydrated<T>>;
+		item = await meta.dehydrator( item );
+		// console.log( `_int_dehydrateRecursive:processValue ::D${depth};2 -> Dehydrated incoming item\n`, item, original );
 	}
 
-	const clone = await make_operable( item );
-	if( Array.isArray( clone ) )
+	const sub_item_promises: Promise<any>[] = [];
+	const processValue = async ( value: any, inner_depth: number = 0 ) =>
 	{
-		for( const idx in clone )
+		let out: any;
+		if ( Array.isArray( value ) )
 		{
-			const sub_item = clone[ idx ];
-			if ( !Array.isArray( sub_item ) && typeof sub_item !== 'object' ) continue; // Skip primitive types
-
-			clone[idx] = null; // Reserve the spot, but remove the object while we process it to break potential cycles
-			let existing = pending.get( sub_item ) as Promise<_int_dehydrated<T>> | undefined;
-			if ( existing === undefined ) {
-				existing = dehydrate_recursive<typeof sub_item>( sub_item, pending, external, ++depth )
-				.then( async ( data ) => {
-					if ( "$$ref" in data )
-					{
-						// Need to add this item to the list of items to write, but we can't serialize it until all promises resolve
-						external.add( { $$ref: data.$$ref, $$val: data.$$val, $$type: data.$$type, $$dp: data.$$dp } );
-						delete data.$$val;
-						delete data.$$dp;
-					}
-					return data;
-				});
-			}
-			pending.set(
-				sub_item,
-				existing.then( ( v ) => {
-					clone[idx] = v;
-					return v;
-				})
-			);
-		}
-
-		const meta = _int_getMetadataFor( item );
-		if ( meta.name !== undefined )
-		{
-			// It's a specialized type that expressed itself as an array
-			return { $$val: clone, $$type: meta.name ?? item.prototype?.name ?? "UNKNOWN_TYPE" };
-		}
-		else
-		{
-			return clone;
-		}
-	}
-	else if( typeof clone === 'object' )
-	{
-		for( const key of Reflect.ownKeys( clone ) )
-		{
-			const sub_item = Reflect.get( clone, key );
-			if ( !Array.isArray( sub_item ) && typeof sub_item !== 'object' ) 
+			out = [];
+			// console.log( `_int_dehydrateRecursive:processValue ::D${depth};iD${inner_depth};3 -> Value is array\n`, value, item )
+			for( let idx = 0; idx < value.length; ++idx )
 			{
-				continue;
-			}
+				const sub_item = value[idx];
+				out[ idx ] = sub_item;
 
-			Reflect.set( clone, key, null ); // Remove the item from the parent to break potential cycles
-
-			let existing = pending.get( sub_item ) as Promise<_int_dehydrated<T>> | undefined;
-			if ( existing === undefined ) {
-				existing = dehydrate_recursive<typeof sub_item>( sub_item, pending, external, ++depth )
-				.then( async ( data ) => {
-					if ( "$$ref" in data )
-					{
-						// Need to add this item to the list of items to write, but we can't serialize it until all promises resolve
-						external.add( { $$ref: data.$$ref, $$val: data.$$val, $$type: data.$$type, $$dp: data.$$dp } );
-						delete data.$$val;
-						delete data.$$dp;
-					}
-					return data;
-				});
-			}
-			pending.set(
-				sub_item,
-				existing.then( ( v ) => {
-					Reflect.set( clone, key, v );
-					return v;
-				})
-			);
-		}
-
-		// Create a reference to the dehydrated object and return that instead.
-		const meta = _int_getMetadataFor( item );
-		if ( meta.name         === undefined ) return clone; // If we don't have a name for the type, it must not be a special type
-		if ( meta.uuidProvider === undefined ) return { $$val: clone, $$type: meta.name } // No UUID provider means we're storing the value in the type itself
-		else                                   return { $$val: clone, $$type: meta.name, $$ref: meta.uuidProvider( item ), $$dp: meta.dataProvider } // Value will be deleted prior to pushing to data provider
-	}
-}
-
-Serializable.Dehydrate = async function<T extends object>( instance: T ): Promise<SerializeTyped<T>>
-{
-	const pending  = new Map();
-	const external: Set<_int_dehydrated<any>> = new Set();
-	const out = await dehydrate_recursive<T>( instance, pending, external );
-	
-	// When using Promise.all( pending.values() ) the array is computed at the call. However, as the promises in `pending` execute, more promises get added to the map.
-	// Thus, we can't await a static array or anything that gets added more than a promise deep won't be awaited. Instead, use the nature of the iterator returned by
-	// `.values()` to continually iterate as long as new entries get added, awaiting each one in turn as it will add the next 
-	for( const process of pending.values() )
-	{
-		await process;
-	}
-
-	// Now that all of the promises have completed, we can add all the resulting objects to the data provider
-	for( const ext of external.values() )
-	{
-		ext.$$dp.put( ext.$$ref, { $$type: ext.$$type, $$val: ext.$$val } as SerializeTyped);
-	}
-
-	delete out.$$dp;
-
-	return out;
-}
-
-
-async function _int_hydrateRecursive( raw_item: { $$type: string, $$val?: any, $$ref?: string }, seen: Map<string, any>, depth: number = 0 ): Promise<any>
-{
-	const { $$type: type, $$ref: ref } = raw_item; // Only grab the ref and type now, since we might not have a value until we pull from the data provider
-	const meta = _int_getMetadataFor( Serializable.REVERSE_LUT.get( type ).prototype );
-
-	// Retrieve the raw item if working with a reference object
-	if ( Reflect.has( raw_item, "$$ref" ) )
-	{
-		const ref  = raw_item.$$ref;
-		if( seen.has( ref ) )
-		{
-			raw_item = seen.get( ref );
-		}
-		else
-		{
-			raw_item = await meta.dataProvider.get( ref );
-			if ( raw_item === null ) return raw_item;
-			seen.set( ref, raw_item );
-		}
-	}
-
-	const processValue = ( value: any, sub_item_promises: Promise<any>[], inner_depth: number = 1 ) => {
-		
-		// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};0.a -> Processing Value`, raw_item )
-
-		if ( typeof value !== 'object' && !Array.isArray( value ) )
-		{
-			// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};1.a -> Raw value not transformable`, raw_item )
-			// Do Nothing - Type will not be transformed
-		}
-		else if ( Array.isArray( value ) )
-		{
-			// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};1.b -> Base value is array`, raw_item )
-			// Iterate Array to find sub-hydratable types
-			for( const [idx, sub_item] of value.entries() )
-			{
-				if ( sub_item === null || typeof sub_item !== 'object' || !Reflect.has( sub_item, "$$type") )
-				{
-					// IF I'M AN ARRAY I NEED TO DO THIS WHOLE BIT AGAIN UNTIL I'M NOT
-					// HOWEVER, I MIGHT NOT BE A HYDRATABLE TYPE, SO I CAN'T JUST CALL THE WHOLE SHEBANG AGAIN.
-					// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};1.b.i -> Array item not hydratable`, idx, sub_item, typeof sub_item );
-					processValue( sub_item, sub_item_promises, ++inner_depth );
+				if ( !Array.isArray( sub_item ) && typeof sub_item !== 'object' )
+				{ // Not an array or object, therefore we don't need to iterate nor dehydrate, leave as is
+					// console.log( `_int_dehydrateRecursive:processValue ::D${depth};iD${inner_depth};3.a -> sub_item will NOT be processed\n`, sub_item, idx, value )
 					continue;
 				}
-	
-				value[ idx ] = null; // Prevent other references to this from walking into this object
-				// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};1.b.ii -> Hydrating item from array`, idx, sub_item )
-	
-				sub_item_promises.push( _int_hydrateRecursive( sub_item, seen, depth + 1 ).then( (v) => {
-					// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};1.b.ii;1 -> Finished Sub item hydrate`, sub_item, idx, v )
-					value[ idx ] = v;
+
+				const sub_meta = _int_getMetadataFor( sub_item );
+				if ( sub_meta.class === undefined )
+				{ // No metadata for this type, but it is iterable
+					// console.log( `_int_dehydrateRecursive:processValue ::D${depth};iD${inner_depth};3.b -> sub_item is iterable, but not a serialize type\n`, sub_item, idx, value )
+					out[ idx ] = await processValue( sub_item, inner_depth + 1 );
+					continue;
+				}
+
+				// console.log( `_int_dehydrateRecursive:processValue ::D${depth};iD${inner_depth};3.c -> sub_item will be processed\n`, sub_item, idx, value );
+				let pending: Promise<any>;
+				if ( seen.has( sub_item ) ) pending = seen.get( sub_item ) as Promise<any>;
+				else                        pending = _int_dehydrateRecursive( sub_item, external, seen, depth + 1 )
+
+				seen.set( sub_item, pending.then( v => {
+					// console.log( `_int_dehydrateRecursive:processValue ::D${depth};iD${inner_depth};3.c.i -> sub_item finished processing\n`, v, sub_item, idx, value )
+					if ( sub_meta.uuidProvider !== undefined )
+					{
+						// console.log( `_int_dehydrateRecursive:processValue ::D${depth};iD${inner_depth};3.c.ii -> sub_item can be stored externally\n`, v, sub_item, idx, value )
+						const ref = sub_meta.uuidProvider( sub_item );
+						out[ idx ] = { $$ref: ref, $$type: sub_meta.name };
+						external.set( ref, { $$type: sub_meta.name, $$value: v.$$value, $$dp: sub_meta.dataProvider } );
+					}
+					else
+					{
+						// console.log( `_int_dehydrateRecursive:processValue ::D${depth};iD${inner_depth};3.c.iii -> sub_item can't be stored externally\n`, v, sub_item, idx, value )
+						out[ idx ] = v;
+					}
 					return v;
 				}));
+				sub_item_promises.push( pending );
 			}
 		}
-		else
+		else if ( typeof value === 'object' )
 		{
-			// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};1.c -> Base value is object`, raw_item )
-			// Iterate Object Keys to find sub-hydratable types
+			out = {};
+			// console.log( `_int_dehydrateRecursive:processValue ::D${depth};iD${inner_depth};4 -> Value is an object\n`, value, item )
 			for( const key of Reflect.ownKeys( value ) )
 			{
 				const sub_item = Reflect.get( value, key );
-				if ( typeof sub_item !== 'object' || !Reflect.has( sub_item, "$$type") )
-				{
-					// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};1.c.i -> item from object not hydratable`, key, sub_item )
-					processValue( sub_item, sub_item_promises, ++inner_depth );
+				Reflect.set( out, key, sub_item );
+
+				if ( !Array.isArray( sub_item ) && typeof sub_item !== 'object' )
+				{ // Not an array or object, therefore we don't need to iterate nor dehydrate, leave as is
+					// console.log( `_int_dehydrateRecursive:processValue ::D${depth};iD${inner_depth};4.a -> sub_item will NOT be processed\n`, sub_item, key, value )
+					out[ key ] = await processValue( sub_item, inner_depth + 1 );
 					continue;
 				}
-	
-				// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};1.c.ii -> Hydrating item from object`, key, sub_item )
-				sub_item_promises.push( _int_hydrateRecursive( sub_item, seen, depth + 1 ).then( (v) =>{
-					// console.log( `_int_hydrateRecursive ::D${depth};iD${inner_depth};1.c -> finished sub item hydrate`, sub_item, key, v )
-					Reflect.set( value, key, v );
+
+				const sub_meta = _int_getMetadataFor( sub_item );
+				if ( sub_meta.class === undefined )
+				{ // No metadata for this type, but it is iterable
+					// console.log( `_int_dehydrateRecursive:processValue ::D${depth};iD${inner_depth};4.b -> sub_item is iterable, but not a serialize type\n`, sub_item, key, value )
+					processValue( sub_item, inner_depth + 1 );
+					continue;
+				}
+
+				// console.log( `_int_dehydrateRecursive:processValue ::D${depth};iD${inner_depth};4.c -> sub_item will be processed\n`, sub_item, key, value );
+				let pending: Promise<any>;
+				if ( seen.has( sub_item ) ) pending = seen.get( sub_item ) as Promise<any>;
+				else                        pending = _int_dehydrateRecursive( sub_item, external, seen, depth + 1 )
+
+				seen.set( sub_item, pending.then( v => {
+					// console.log( `_int_dehydrateRecursive:processValue ::D${depth};iD${inner_depth};4.b.i -> sub_item finished processing\n`, v, sub_item, key, value )
+					if ( sub_meta.uuidProvider !== undefined )
+					{
+						// console.log( `_int_dehydrateRecursive:processValue ::D${depth};iD${inner_depth};4.b.ii -> sub_item can be stored externally\n`, v, sub_item, key, value )
+						const ref = sub_meta.uuidProvider( sub_item );
+						out[ key ] = { $$ref: ref, $$type: sub_meta.name };
+						external.set( ref, { $$type: sub_meta.name, $$value: v.$$value, $$dp: sub_meta.dataProvider } );
+					}
+					else
+					{
+						// console.log( `_int_dehydrateRecursive:processValue ::D${depth};iD${inner_depth};4.b.iii -> sub_item can't be stored externally\n`, v, sub_item, key, value )
+						out[ key ] = v;
+					}
 					return v;
 				}));
+				sub_item_promises.push( pending );
 			}
 		}
+		else
+		{
+			// console.log( `_int_dehydrateRecursive:processValue ::D${depth};iD${inner_depth};4 -> Value is not an array or object\n`, value, item )
+			out = value;
+		}
+		return out;
 	}
-
-	// Next, hydrate any sub references made in these objects
-	// The raw item should be either a primitive, object, or an array. So we can handle those edge cases easily
-	const { $$val: value } = raw_item; // Grab the value now, since we'll have retrieved it if needed
-	const sub_item_promises: Promise<any>[] = [];
-	processValue( value, sub_item_promises );
-	// if ( typeof value !== 'object' && !Array.isArray( value ) )
-	// {
-	// 	console.log( `_int_hydrateRecursive ::D${depth};1.a -> Raw value not transformable`, raw_item )
-	// 	// Do Nothing - Type will not be transformed
-	// }
-	// else if ( Array.isArray( value ) )
-	// {
-	// 	console.log( `_int_hydrateRecursive ::D${depth};1.b -> Base value is array`, raw_item )
-	// 	// Iterate Array to find sub-hydratable types
-	// 	for( const [idx, sub_item] of value.entries() )
-	// 	{
-	// 		if ( sub_item === null || typeof sub_item !== 'object' || !Reflect.has( sub_item, "$$type") )
-	// 		{
-	// 			// IF I'M AN ARRAY I NEED TO DO THIS WHOLE BIT AGAIN UNTIL I'M NOT
-	// 			// HOWEVER, I MIGHT NOT BE A HYDRATABLE TYPE, SO I CAN'T JUST CALL THE WHOLE SHEBANG AGAIN.
-	// 			console.log( `_int_hydrateRecursive ::D${depth};1.b.i -> Array item not hydratable`, idx, sub_item, typeof sub_item )
-	// 			continue;
-	// 		}
-
-	// 		value[ idx ] = null; // Prevent other references to this from walking into this object
-	// 		console.log( `_int_hydrateRecursive ::D${depth};1.b.ii -> Hydrating item from array`, idx, sub_item )
-
-	// 		sub_item_promises.push( _int_hydrateRecursive( sub_item, seen, depth + 1 ).then( (v) => {
-	// 			console.log( `_int_hydrateRecursive ::D${depth};1.b.ii;1 -> Finished Sub item hydrate`, sub_item, idx, v )
-	// 			value[ idx ] = v;
-	// 			return v;
-	// 		}));
-	// 	}
-	// }
-	// else
-	// {
-	// 	console.log( `_int_hydrateRecursive ::D${depth};1.c -> Base value is object`, raw_item )
-	// 	// Iterate Object Keys to find sub-hydratable types
-	// 	for( const key of Reflect.ownKeys( value ) )
-	// 	{
-	// 		const sub_item = Reflect.get( value, key );
-	// 		if ( typeof sub_item !== 'object' || !Reflect.has( sub_item, "$$type") )
-	// 		{
-	// 			console.log( `_int_hydrateRecursive ::D${depth};1.c.i -> item from object not hydratable`, key, sub_item )
-	// 			continue;
-	// 		}
-
-	// 		console.log( `_int_hydrateRecursive ::D${depth};1.c.ii -> Hydrating item from object`, key, sub_item )
-	// 		sub_item_promises.push( _int_hydrateRecursive( sub_item, seen, depth + 1 ).then( (v) =>{
-	// 			console.log( `_int_hydrateRecursive ::D${depth};1.c -> finished sub item hydrate`, sub_item, key, v )
-	// 			Reflect.set( value, key, v );
-	// 			return v;
-	// 		}));
-	// 	}
-	// }
-
+	const clone = await processValue( item );
+	// console.log( `_int_dehydrateRecursive ::D${depth};5 -> Awaiting sub item promises\n`, sub_item_promises )
 	await Promise.all( sub_item_promises );
 
-	// Next, transform the type based on the hydrator
-	const out = meta.hydrator ? await meta.hydrator( raw_item.$$val ) : Object.assign( Object.create( meta.class.prototype ), raw_item.$$val );
+	let out;
+	if( meta.uuidProvider ) out =  { $$ref: meta.uuidProvider( original ), $$value: clone, $$type: meta.name }
+	else                    out =  {                                       $$value: clone, $$type: meta.name };
 
-	if ( ref !== undefined )
+	// console.log( `_int_dehydrateRecursive ::D${depth};6 -> Finished returning output\n`, out, original )
+	return out;
+}
+Serializable.Dehydrate = async function( instance: any ): Promise<any>
+{
+	const external = new Map<string, { $$type: string, $$value: any, $$dp: DataProvider }>();
+	const out = await _int_dehydrateRecursive( instance, external );
+
+	// Put all external references in their data providers
+	for( const [ ref, item ] of external )
 	{
-		seen.set( ref, out );
+		item.$$dp.put( ref, {
+			$$type:  item.$$type,
+			$$value: item.$$value
+		})
 	}
+
+	// console.log( `Serializable.Dehydrate ::out`, out );
 
 	return out;
 }
 
-Serializable.Hydrate = async function<T extends object>( serialized: { $$ref: string, $$type: string } ): Promise<T>
+async function _int_hydrateRecursive( item: any, seen: Map<string, any>, depth: number = 0 )
 {
-	const out = await _int_hydrateRecursive( serialized, new Map() );
+	const type_name = item.$$type;
+	const type = Serializable.REVERSE_LUT.get( type_name );
+	if( type === undefined ) {
+		throw new Error( `Invalid or unknown type during hydration. \`${item.$$type}\` not found in reverse lookup. Has the type name changed since dehydration?` );
+	}
+
+	const meta = _int_getMetadataFor( type.prototype );
+	console.log( `_int_hydrateRecursive ::D${depth};1 -> Hydrating from item: `, item, `\nmetadata:`, meta );
+
+	if ( "$$ref" in item )
+	{ // Item is a reference, inflate with data provider attached to type, or seen lut
+		const ref = item.$$ref;
+		item = seen.get( ref );
+		if ( item === undefined )
+		{
+			item = await meta.dataProvider.get( ref );
+			if ( item === undefined || item === null ) throw new Error( `\`${ref}\` was not found in the data provider attached to \`${type_name}\`, or was null/undefined after retrieval` );
+			seen.set( ref, item );
+		}
+		else
+		{
+			console.log( `ALREADY PROCESSING ITEM WITH REF:`, ref );
+			return item;
+		}
+	}
+	const value = item.$$value;
+	// console.log( `_int_hydrateRecursive ::D${depth};2 -> Begin dehydrating raw item: `, item, `\n`, value );
+
+	const sub_item_promises: Promise<any>[] = [];
+
+	async function processValue( value: any[] | any, inner_depth: number = 0 )
+	{
+		if ( Array.isArray( value ) )
+		{
+			for( let idx = 0; idx < value.length; ++idx )
+			{
+				const sub_item = value[ idx ];
+				value[ idx ] = null;
+
+				if ( !Array.isArray( sub_item ) && typeof sub_item !== 'object' )
+				{
+					value[ idx ] = sub_item;
+				}
+				else if ( Array.isArray( sub_item ) || ( typeof sub_item === 'object' && !Reflect.has( sub_item, "$$type" ) ) )
+				{ // Value is iterable, but not a serialized type.
+					value[ idx ] = await processValue( sub_item, inner_depth + 1 );
+				}
+				else
+				{
+					sub_item_promises.push(
+						_int_hydrateRecursive( sub_item, seen, depth + 1 ).then( v => {
+							// console.log( `Finished hydrate:`, v );
+							value[ idx ] = v;
+						})
+					)
+				}
+			}
+		}
+		else if ( typeof value === 'object' )
+		{
+			for( const key of Reflect.ownKeys( value ) )
+			{
+				const sub_item = value[ key ];
+				value[ key ] = null;
+
+				if ( !Array.isArray( sub_item ) && typeof sub_item !== 'object' )
+				{
+					value[ key ] = sub_item;
+				}
+				else if ( Array.isArray( sub_item ) || ( typeof sub_item === 'object' && !Reflect.has( sub_item, "$$type" ) ) )
+				{ // Value is iterable, but not a serialized type.
+					value[ key ] = await processValue( sub_item, inner_depth + 1 );
+				}
+				else
+				{
+					sub_item_promises.push(
+						_int_hydrateRecursive( sub_item, seen, depth + 1 ).then( v => {
+							// console.log( `Finished hydrate:`, v );
+							value[ key ] = v;
+						})
+					)
+				}
+			}
+		}
+		// ELSE: Value was primitive, no work to be done
+		return value;
+	}
+	await processValue( value );
+	await Promise.all( sub_item_promises );
+	// console.log( `_int_hydrateRecursive ::D${depth};4 -> Finished processing all sub items` );
+
+	let out = value;
+	if( meta.hydrator ) out = await meta.hydrator( value );
+	if ( !( out instanceof type ) )
+	{
+		out = Object.assign( Object.create( type.prototype ), out );
+	}
+	// console.log( `_int_hydrateRecursive ::D${depth};4 -> Finished hydrating`, out, clone, value, item );
+	return out;
+}
+
+Serializable.Hydrate = async function<T>( reference: { $$ref: string, $$type: string } ): Promise<T>
+{
+	const out = await _int_hydrateRecursive( reference, new Map() );
+	// console.log( `Serializable.Hydrate ::out`, out );
 	return out;
 }

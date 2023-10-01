@@ -26,4 +26,12 @@ export class ModPlan
 		const uuid = mod instanceof Mod ? mod.uuid : mod;
 		return this.mods.has( uuid );
 	}
+	public put( mod: Mod ): void
+	{
+		this.mods.set( mod.uuid, mod );
+	}
+	public remove( mod: Mod ): void
+	{
+		this.mods.delete( mod.uuid );
+	}
 }
