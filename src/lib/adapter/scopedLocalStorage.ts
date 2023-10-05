@@ -1,5 +1,5 @@
-import type { DataProvider, JsonType, SerializeTyped } from "../lib/Serialize";
-import type { IncludeFunctions } from "../lib/UtilityTypes";
+import type { DataProvider, JsonType, SerializeTyped } from "../Serialize";
+import type { IncludeFunctions } from "../UtilityTypes";
 
 export class scopedStorage implements IncludeFunctions< typeof localStorage >
 {

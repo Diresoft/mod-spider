@@ -45,6 +45,7 @@ export interface DataProvider {
 	has   ( uuid: string                                      ): Promise<boolean>;
 	put   ( uuid: string, data: SerializeTyped< JsonType >    ): Promise<void>;
 	get<T>( uuid: string                                      ): Promise< SerializeTyped< JsonType<T> > >;
+	delete( uuid: string                                      ): Promise<void>;
 }
 export class localStorageDataProvider implements DataProvider {
 	public async has(uuid: string): Promise<boolean> {
@@ -61,6 +62,10 @@ export class localStorageDataProvider implements DataProvider {
 			return JSON.parse( raw );
 		}
 	}
+	public async delete( uuid: string): Promise<void>
+	{
+		return localStorage.removeItem( uuid );
+	}
 }
 export const defaultDataProvider = new localStorageDataProvider();
 
@@ -72,7 +77,7 @@ export type SerializableInfo<T extends Class, DT = any > = {
 	uuidProvider     ?: UuidProvider<T>
 	dehydrator       ?: Dehydrator<InstanceType<T>, DT>
 	hydrator         ?: Hydrator  <InstanceType<T>, DT>
-	dataProvider     : DataProvider
+	// dataProvider     : DataProvider
 }
 
 // == Serialization Types ==
@@ -87,7 +92,7 @@ function _int_getMetadataFor<T extends Class>( target: InstanceType<T> ): Serial
 		uuidProvider:    Reflect.get( target, Serializable.UUID_PROVIDER ),
 		dehydrator:      Reflect.get( target, Serializable.DEHYDRATOR    ),
 		hydrator:        Reflect.get( target, Serializable.HYDRATOR      ),
-		dataProvider:    Reflect.get( target, Serializable.DATA_PROVIDER ) ?? defaultDataProvider
+		// dataProvider:    Reflect.get( target, Serializable.DATA_PROVIDER ) ?? defaultDataProvider
 	}
 	return out;
 }
@@ -104,7 +109,7 @@ export function Serializable<T extends Class>( options?: Partial< SerializableIn
 		if ( options?.uuidProvider    !== undefined ) Reflect.set( target.prototype, Serializable.UUID_PROVIDER, options.uuidProvider     );
 		if ( options?.dehydrator      !== undefined ) Reflect.set( target.prototype, Serializable.DEHYDRATOR   , options.dehydrator       );
 		if ( options?.hydrator        !== undefined ) Reflect.set( target.prototype, Serializable.HYDRATOR     , options.hydrator         );
-		if ( options?.dataProvider    !== undefined ) Reflect.set( target.prototype, Serializable.DATA_PROVIDER, options.dataProvider     );
+		// if ( options?.dataProvider    !== undefined ) Reflect.set( target.prototype, Serializable.DATA_PROVIDER, options.dataProvider     );
 
 		// I'm ignoring toJSON for now.
 
@@ -113,6 +118,7 @@ export function Serializable<T extends Class>( options?: Partial< SerializableIn
 		// {
 		// 	console.warn( `\`${target.name}\` has no UUID provider. Items of this type will not be stored externally`, target.prototype, target.prototype[ Serializable.UUID_PROVIDER ] );
 		// }
+		
 		//console.log( `@Serializable -> ${target.name}`, target.prototype );
 	}
 }
@@ -126,7 +132,7 @@ Serializable.TYPENAME      = Symbol( "@@Serializable::TYPENAME"      );
 Serializable.HYDRATOR      = Symbol( "@@Serializable::HYDRATOR"      );
 Serializable.DEHYDRATOR    = Symbol( "@@Serializable::DEHYDRATOR"    );
 Serializable.UUID_PROVIDER = Symbol( "@@Serializable::UUID_PROVIDER" );
-Serializable.DATA_PROVIDER = Symbol( "@@Serializable::DATA_PROVIDER" );
+// Serializable.DATA_PROVIDER = Symbol( "@@Serializable::DATA_PROVIDER" );
 
 // Provide a static reverse LUT for hydrating from the type name
 Serializable.REVERSE_LUT = new Map<string, Class>();
@@ -134,7 +140,14 @@ Serializable.REVERSE_LUT = new Map<string, Class>();
 // == Serializer Helpers ==
 Serializable.GetDataProviderFor = function ( target: object ): DataProvider
 {
-	return Reflect.get( target, Serializable.DATA_PROVIDER ) ?? defaultDataProvider;
+	return defaultDataProvider; //Reflect.get( target, Serializable.DATA_PROVIDER ) ?? defaultDataProvider;
+}
+
+Serializable.GetUuidOf = function ( target: object ): UuidType
+{
+	const meta = _int_getMetadataFor( target );
+	if ( meta === undefined || meta.uuidProvider === undefined ) throw new Error( `Type \`${target.constructor.name}\` does not have a UUID provider defined` );
+	return meta.uuidProvider( target );
 }
 
 // == CORE TYPE SERIALIZER DATA ==
@@ -163,43 +176,6 @@ Serializable({
 })(Map, null);
 
 // === DEHYDRATE ===
-
-
-async function make_operable<T>( original: T ): Promise< JsonType<T> >
-{
-	const meta = _int_getMetadataFor( original );
-
-	// Create a clone so we can mutate the data
-	let clone;
-	if( meta.dehydrator !== undefined )
-	{
-		clone = await meta.dehydrator( original ); // If the user defined a transformer, execute it as the cloning method
-	}
-	// else if( original instanceof Set )
-	// {
-	// 	clone = new Set( original );
-	// }
-	// else if ( original instanceof Map )
-	// {
-	// 	clone = new Map( original );
-	// }
-	else if ( Array.isArray( original ) )
-	{
-		clone = Array.from( original );
-	}
-	else if ( typeof original === 'object' )
-	{
-		clone = Object.assign( Object.create( Reflect.getPrototypeOf( original ) ), original );
-	}
-	else
-	{
-		clone = original; // Primitive types just need to be assigned
-	}
-
-	//console.log( `make_operable\n\tmeta:`, meta, `\n\ttransform:`, original, ` -> `, clone );
-	return clone;
-}
-
 async function _int_dehydrateRecursive( item: any, external: Map<string, any>, seen: Map<any, Promise<any>> = new Map(), depth: number = 0 ): Promise<any>
 {
 	const original = item;
@@ -252,7 +228,7 @@ async function _int_dehydrateRecursive( item: any, external: Map<string, any>, s
 						// console.log( `_int_dehydrateRecursive:processValue ::D${depth};iD${inner_depth};3.c.ii -> sub_item can be stored externally\n`, v, sub_item, idx, value )
 						const ref = sub_meta.uuidProvider( sub_item );
 						out[ idx ] = { $$ref: ref, $$type: sub_meta.name };
-						external.set( ref, { $$type: sub_meta.name, $$value: v.$$value, $$dp: sub_meta.dataProvider } );
+						external.set( ref, { $$type: sub_meta.name, $$value: v.$$value } );
 					}
 					else
 					{
@@ -300,7 +276,7 @@ async function _int_dehydrateRecursive( item: any, external: Map<string, any>, s
 						// console.log( `_int_dehydrateRecursive:processValue ::D${depth};iD${inner_depth};4.b.ii -> sub_item can be stored externally\n`, v, sub_item, key, value )
 						const ref = sub_meta.uuidProvider( sub_item );
 						out[ key ] = { $$ref: ref, $$type: sub_meta.name };
-						external.set( ref, { $$type: sub_meta.name, $$value: v.$$value, $$dp: sub_meta.dataProvider } );
+						external.set( ref, { $$type: sub_meta.name, $$value: v.$$value } );
 					}
 					else
 					{
@@ -332,13 +308,13 @@ async function _int_dehydrateRecursive( item: any, external: Map<string, any>, s
 }
 Serializable.Dehydrate = async function( instance: any ): Promise<any>
 {
-	const external = new Map<string, { $$type: string, $$value: any, $$dp: DataProvider }>();
+	const external = new Map<string, { $$type: string, $$value: any }>();
 	const out = await _int_dehydrateRecursive( instance, external );
 
 	// Put all external references in their data providers
 	for( const [ ref, item ] of external )
 	{
-		item.$$dp.put( ref, {
+		defaultDataProvider.put( ref, {
 			$$type:  item.$$type,
 			$$value: item.$$value
 		})
@@ -351,14 +327,6 @@ Serializable.Dehydrate = async function( instance: any ): Promise<any>
 
 async function _int_hydrateRecursive( item: any, seen: Map<string, any>, depth: number = 0 )
 {
-	const type_name = item.$$type;
-	const type = Serializable.REVERSE_LUT.get( type_name );
-	if( type === undefined ) {
-		throw new Error( `Invalid or unknown type during hydration. \`${item.$$type}\` not found in reverse lookup. Has the type name changed since dehydration?` );
-	}
-
-	const meta = _int_getMetadataFor( type.prototype );
-	console.log( `_int_hydrateRecursive ::D${depth};1 -> Hydrating from item: `, item, `\nmetadata:`, meta );
 
 	if ( "$$ref" in item )
 	{ // Item is a reference, inflate with data provider attached to type, or seen lut
@@ -366,16 +334,24 @@ async function _int_hydrateRecursive( item: any, seen: Map<string, any>, depth: 
 		item = seen.get( ref );
 		if ( item === undefined )
 		{
-			item = await meta.dataProvider.get( ref );
-			if ( item === undefined || item === null ) throw new Error( `\`${ref}\` was not found in the data provider attached to \`${type_name}\`, or was null/undefined after retrieval` );
+			item = await defaultDataProvider.get( ref );
+			if ( item === undefined || item === null ) throw new Error( `\`${ref}\` was not found, or was null/undefined after retrieval` );
 			seen.set( ref, item );
 		}
 		else
 		{
-			console.log( `ALREADY PROCESSING ITEM WITH REF:`, ref );
+			// console.log( `ALREADY PROCESSING ITEM WITH REF:`, ref );
 			return item.$$value;
 		}
 	}
+	const type_name = item.$$type;
+	const type = Serializable.REVERSE_LUT.get( type_name );
+	if( type === undefined ) {
+		throw new Error( `Invalid or unknown type during hydration. \`${item.$$type}\` not found in reverse lookup. Has the type name changed since dehydration?` );
+	}
+
+	const meta = _int_getMetadataFor( type.prototype );
+	// console.log( `_int_hydrateRecursive ::D${depth};1 -> Hydrating from item: `, item, `\nmetadata:`, meta );
 	const value = item.$$value;
 	// console.log( `_int_hydrateRecursive ::D${depth};2 -> Begin dehydrating raw item: `, item, `\n`, value );
 
@@ -452,9 +428,9 @@ async function _int_hydrateRecursive( item: any, seen: Map<string, any>, depth: 
 	return out;
 }
 
-Serializable.Hydrate = async function<T>( reference: { $$ref: string, $$type: string } ): Promise<T>
+Serializable.Hydrate = async function<T>( uuid: string ): Promise<T>
 {
-	const out = await _int_hydrateRecursive( reference, new Map() );
+	const out = await _int_hydrateRecursive( { $$ref: uuid }, new Map() );
 	// console.log( `Serializable.Hydrate ::out`, out );
 	return out;
 }

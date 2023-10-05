@@ -1,27 +1,29 @@
 import { Serializable, type Immutable } from "./Serialize";
 
-@Serializable()
+@Serializable({
+	async dehydrator( hydrated: Immutable<ModLink> ): Promise<any>
+	{
+		const out = Object.assign( {}, hydrated ) as ModLink & { ref: any };
+		delete out.ref; // `ref` is a protected member, but we want to fully remove it from the output
+		return out;
+	}
+})
 export class ModLink<T extends Mod=Mod>
 {
 	public readonly ref_uuid: string;
 	protected       ref?:      T;
-
 	public async get(): Promise<T>
 	{
-		return Promise.resolve( this.ref as T );
+		try {
+			this.ref = await Serializable.Hydrate( this.ref_uuid );
+		} catch( _ ) {}
+		return this.ref as T;
 	}
 
 	constructor( ref_uuid: string, ref?: T )
 	{
 		this.ref_uuid = ref_uuid;
 		this.ref = ref;
-	}
-
-	toJSON()
-	{
-		const out = Object.assign( {}, this );
-		console.log( `MODLINK -> TOJSON`, this, '->', out );
-		return out;
 	}
 }
 
@@ -31,19 +33,21 @@ export class ModLink<T extends Mod=Mod>
 		return instance.uuid;
 	}
 })
-export class Mod
+export abstract class Mod
 {
 	public readonly uuid: string;
+
 	public title?: string;
 	public description?: string;
+	public notes?: string;
+
+	public cover_image_uri: string = "/favicon.png";
 
 	public requirements: Set<ModLink> = new Set();
+	public incompatible: Set<ModLink> = new Set();
+	
 	constructor( uuid: string = crypto.randomUUID() )
 	{
 		this.uuid = uuid;
 	}
-
-	public foo() {}
-	
 }
-

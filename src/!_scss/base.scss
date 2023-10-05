@@ -1,0 +1,11 @@
+html {
+	background-color: #333;
+	color: #EEE;
+}
+
+a {
+	color: #DFD;
+	&:visited {
+		color: #FDD;
+	}
+}

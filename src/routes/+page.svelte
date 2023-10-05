@@ -1,81 +1,67 @@
-<script lang="ts">
+<script lang='ts'>
+    import { ModPlan } from "@lib/Plan";
+    import { Serializable } from "@lib/Serialize";
+    import { Database } from "@lib/db";
+    import { onMount } from "svelte";
     import { get, writable } from "svelte/store";
-    import { Mod } from "../lib/Mod";
-    import { NxmApi, NxmMod } from "../adapter/Nexusmods";
-    import { onDestroy, onMount, setContext } from "svelte";
-    import { scopedStorage, scopedStorageDataProvider } from "../adapter/scopedLocalStorage";
-    import { ModPlan } from "../lib/Plan";
-    import { Database } from "../lib/db";
-    import { Serializable } from "../lib/Serialize";
-    import ModView from "./compontents/ModView.svelte";
 
-	// Add the loaded plan to the context
-	const plan = writable( new ModPlan() );
+	let plan_name: string;
 
-	let plan_arr: Mod[] = [];
-	$: {
-		plan_arr = $plan.allMods;
-		setContext( "plan", plan );
-	}
+	let all_plans = writable( new Set<ModPlan>() );
+	$: all_plans_arr = $all_plans.values();
 
 	onMount( async () => {
-		//await load();
-	})
-	onDestroy( async () => {
-		//await save();
+		// all_plans.set( await Database.get( 'all_plans' ) ?? new Set() );
+		all_plans.set( await getPlans() );
 	})
 
-	async function load()
+	async function getPlans()
 	{
-		const loaded_plan = await Database.get( 'plan', ModPlan );
-		console.log( `Loaded: `, loaded_plan );
-		if ( loaded_plan instanceof ModPlan )
-		{
-			plan.set( loaded_plan );
-		}
+		return ( await Serializable.Hydrate<Set<ModPlan>>( "all_plans" ) ) ?? new Set();;
+	}
+	async function savePlans()
+	{
+		await Serializable.GetDataProviderFor( Set ).put( "all_plans", await Serializable.Dehydrate( get( all_plans ) ) );
 	}
 
-	async function save()
+	async function addPlan()
 	{
-		// Save plan to local storage
-		const plan_id = await Database.put( get( plan ) );
-		console.log( `Saved: `, plan_id, get( plan ) );
+		if( plan_name.length < 1 ) return;
+
+		const newPlan = new ModPlan( plan_name );
+		await Database.put( newPlan );
+		all_plans.update( all => {
+			all.add( newPlan );
+			return all;
+		})
+		await savePlans();
 	}
 
-	async function addModFromURL( url: string )
+	async function deletePlan( plan: ModPlan )
 	{
-		const nxmMod = new NxmMod( await NxmApi.getModInfo( url ) );
-		plan.update( p => {
-			p.add( nxmMod )
-			console.log( p );
-			return p;
-		 } );
+		await Database.delete( plan.name );
+		all_plans.update( all => {
+			all.delete( plan );
+			return all;
+		});
+		await savePlans();
 	}
-
-	let nexusmodsUrl: string = "https://www.nexusmods.com/skyrimspecialedition/mods/86492";
-	// let nexusmodsUrl: string = "https://www.nexusmods.com/skyrimspecialedition/mods/93962";
-	// let nexusmodsUrl: string = "https://www.nexusmods.com/skyrimspecialedition/mods/32444";
 </script>
 
-<main class="container">
-
-	<input type="text" placeholder="Nexusmods URL" bind:value={nexusmodsUrl} />
-	<button on:click={() => addModFromURL(nexusmodsUrl)}>Add Mod</button>
-	<button on:click={() => save()}>Save</button>
-	<button on:click={() => load()}>Load</button>
-
-	<mods>
-		{#each plan_arr as mod }
-			<ModView {mod} />
-		{/each}
-	</mods>
-
-</main>
-
-<style lang='scss'>
-	mods {
-		width: 500px;
-		display: flex;
-		flex-direction: column;
-	}
-</style>
+<article>
+	<header>Plans:</header>
+	<section>
+		<ul>
+			{#each all_plans_arr as plan}
+				<li>
+					<button on:click={()=>{ deletePlan( plan ) }}>-</button>
+					<a href="/plan/{plan.name}">{plan.name}</a>
+				</li>
+			{/each}
+		</ul>
+	</section>
+	<section>
+		<input type="text" bind:value={plan_name}/>
+		<button on:click={addPlan}>Add Plan</button>
+	</section>
+</article>

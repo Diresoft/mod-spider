@@ -1,9 +1,10 @@
 import { ResponseType, fetch } from "@tauri-apps/api/http";
 import { JSDOM } from 'jsdom';
-import { Mod, ModLink } from "../lib/Mod";
-import { Serializable } from "../lib/Serialize";
+import { Mod, ModLink } from "../Mod";
+import { Serializable, type Immutable } from "../Serialize";
 import { DateTime, Duration } from 'luxon';
 import { scopedStorage } from "./scopedLocalStorage";
+import { Database } from "@lib/db";
 
 
 export const nexusmodsStorage = scopedStorage.scope( "nxmInfo" );
@@ -25,21 +26,42 @@ type NxmModInfo = {
 @Serializable()
 export class NxmMod extends Mod
 {
-	public image: string;
+	public static urlToUuid( url: string )
+	{
+		return `nxmMod_${NxmApiSingleton.parseNxmId( url )}`;
+	}
+
+	protected src_info: NxmModInfo;
+	public get source_info(): Readonly<NxmModInfo> { return this.src_info; } // For reading values only
+
+	// public image: string;
 	public url:   string;
 	public nxmId: string;
 
 	constructor( nmInfo: NxmModInfo )
 	{
-		super( nmInfo.url );
+		super( NxmMod.urlToUuid( nmInfo.url ) );
+		this.src_info = nmInfo;
 
-		this.title       = nmInfo.title;
-		this.description = nmInfo.description;
-		this.image       = nmInfo.image;
-		this.url         = nmInfo.url;
-		this.nxmId       = nmInfo.nxmId;
+		// Initial configuration copies the source into all fields
+		this.title           = nmInfo.title;
+		this.description     = nmInfo.description;
+		this.cover_image_uri = nmInfo.image;
+		this.url             = nmInfo.url;
+		this.nxmId           = nmInfo.nxmId;
 
-		for( const [i, requirement] of nmInfo.requirements.entries() )
+		this.resetRequirements();
+	}
+
+	async reload()
+	{
+		this.src_info = await NxmApi.getModInfo( this.src_info.url );
+	}
+
+	resetRequirements()
+	{
+		this.requirements = new Set();
+		for( const [_, requirement] of this.src_info.requirements.entries() )
 		{
 			this.requirements.add( new NxmModLink( requirement ) );
 		}
@@ -50,21 +72,26 @@ export class NxmMod extends Mod
 @Serializable()
 export class NxmModLink extends ModLink<NxmMod>
 {
+	public link_url: string;
 	public note: string;
+
 	public async get(): Promise<NxmMod>
 	{
-		if( this.ref === undefined )
+		this.ref = await super.get();
+		if ( this.ref === undefined )
 		{
-			const info = await NxmApi.getModInfo( this.ref_uuid );
+			const info = await NxmApi.getModInfo( this.link_url );
 			this.ref = new NxmMod( info );
+			await Database.put( this.ref );
 		}
 		return this.ref;
 	}
 
 	constructor( link_info: { link: string, note: string } )
 	{
-		super( link_info.link)
-		this.note = link_info.note;
+		super( nxmUrlToUuid( link_info.link ) );
+		this.link_url = link_info.link;
+		this.note     = link_info.note;
 	}
 }
 
@@ -101,6 +128,7 @@ class NxmApiSingleton
 		// Check if the cached data has expired
 		if ( cached !== undefined && cached.cache_ts.diffNow() > NxmApiSingleton.MAX_CACHE_AGE )
 		{
+			console.warn( `Cache expired for: ${url}` )
 			cached = undefined;
 			nexusmodsStorage.removeItem( url );
 		}
