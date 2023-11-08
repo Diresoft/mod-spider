@@ -3,16 +3,20 @@ import { Serializable, type Class, defaultDataProvider } from "./Serialize";
 export type UuidType = ReturnType<typeof crypto.randomUUID> | string;
 export type Indexable<T> = T & { get uuid(): UuidType }
 
+export class Index {
+	
+}
 export class Database {
-	static async put<T extends object>( data: T ): Promise<UuidType>
+	static async put<T extends object>( data: T, uuid?: UuidType )
 	{
 		const dehydrated = await Serializable.Dehydrate( data );
-		const uuid = dehydrated.$$ref;
+		dehydrated.uuid = uuid ?? dehydrated.$$ref;
 
 		const dp = Serializable.GetDataProviderFor( data );
-		dp.put( uuid, dehydrated );
-		return uuid;
+		dp.put( dehydrated.uuid, dehydrated );
+		return dehydrated.uuid;
 	}
+	
 	static async get<T extends object>( uuid: UuidType ): Promise<T>
 	{
 		return await Serializable.Hydrate( uuid );
@@ -31,4 +35,5 @@ export class Database {
 
 		return dp.has( uuid );
 	}
+
 }

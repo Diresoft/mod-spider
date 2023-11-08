@@ -3,30 +3,33 @@ import { GenericWebMod } from "./adapter/GenericWebMod";
 import { NxmApi, NxmMod, NxmModLink } from "./adapter/Nexusmods";
 import { Database } from "./db";
 
-export async function MakeModFromURL( url: string ): Promise<Mod>
+export async function MakeModFromURL( inUrl: string ): Promise<Mod>
 {
-	if ( url.includes( "www.nexusmods.com" ) )
+	const url = new URL( inUrl );
+	const safe_url = `${url.origin}${url.pathname}`
+
+	if ( url.hostname === "www.nexusmods.com" )
 	{
-		const uuid = NxmMod.urlToUuid( url );
+		const uuid = NxmMod.urlToUuid( url.pathname );
 		if( await Database.has( uuid, NxmMod.prototype ) )
 		{
 			return Database.get( uuid );
 		}
 		else
 		{
-			return new NxmMod( await NxmApi.getModInfo( url ) );
+			return new NxmMod( await NxmApi.getModInfo( safe_url ) );
 		}
 	}
 	else
 	{
-		const uuid = GenericWebMod.urlToUuid( url );
+		const uuid = GenericWebMod.urlToUuid( safe_url );
 		if( await Database.has( uuid, GenericWebMod.prototype ) )
 		{
 			return Database.get( uuid );
 		}
 		else
 		{
-			return new GenericWebMod( url );
+			return new GenericWebMod( inUrl );
 		}
 	}
 }

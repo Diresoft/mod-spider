@@ -76,7 +76,7 @@ export type SerializableInfo<T extends Class, DT = any > = {
 
 	uuidProvider     ?: UuidProvider<T>
 	dehydrator       ?: Dehydrator<InstanceType<T>, DT>
-	hydrator         ?: Hydrator  <InstanceType<T>, DT>
+	hydrator         ?: Hydrator  <InstanceType<T>, DT|JsonType<DT>>
 	// dataProvider     : DataProvider
 }
 
@@ -240,7 +240,7 @@ async function _int_dehydrateRecursive( item: any, external: Map<string, any>, s
 				sub_item_promises.push( pending );
 			}
 		}
-		else if ( typeof value === 'object' )
+		else if ( value !== null && typeof value === 'object' )
 		{
 			out = {};
 			// console.log( `_int_dehydrateRecursive:processValue ::D${depth};iD${inner_depth};4 -> Value is an object\n`, value, item )
@@ -249,7 +249,7 @@ async function _int_dehydrateRecursive( item: any, external: Map<string, any>, s
 				const sub_item = Reflect.get( value, key );
 				Reflect.set( out, key, sub_item );
 
-				if ( !Array.isArray( sub_item ) && typeof sub_item !== 'object' )
+				if ( sub_item === null || (!Array.isArray( sub_item ) && typeof sub_item !== 'object') )
 				{ // Not an array or object, therefore we don't need to iterate nor dehydrate, leave as is
 					// console.log( `_int_dehydrateRecursive:processValue ::D${depth};iD${inner_depth};4.a -> sub_item will NOT be processed\n`, sub_item, key, value )
 					out[ key ] = await processValue( sub_item, inner_depth + 1 );

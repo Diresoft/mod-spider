@@ -9,6 +9,11 @@
     import { Mod } from "@lib/Mod";
     import { GenericWebMod } from "@lib/adapter/GenericWebMod";
     import { MakeModFromURL } from "@lib/ModHelper";
+    import type { Snapshot } from "@sveltejs/kit";
+    import { Serializable } from "@lib/Serialize";
+	import { save, open} from '@tauri-apps/api/dialog';
+	import { documentDir, join } from '@tauri-apps/api/path';
+	import { writeTextFile } from '@tauri-apps/api/fs';
 
 	async function loadPlan( name: string )
 	{
@@ -25,15 +30,52 @@
 
 		return p;
 	}
+	async function exportPlan()
+	{
+		const defaultPath = localStorage.getItem( 'last_export_path' ) ?? await documentDir();
+		const fp           = await open({
+			defaultPath,
+			directory: true,
+			multiple:  false,
+			title: "Export Location"
+		});
+		if( Array.isArray( fp ) || fp === null ) throw new Error( `Export path must be selected and singular` );
+		localStorage.setItem( 'last_export_path', fp );
+		
+		const out_path = await join( fp, `${$plan.name}.json` );
+		const dehydrated = (await Serializable.Dehydrate( get( plan )))
+		const as_str = JSON.stringify( dehydrated.$$value, null, '\t' );
+
+		await writeTextFile( out_path, as_str );
+	}
 
 	async function savePlan()
 	{
 		await Database.put( get( plan ) );
 	}
 
+	let new_plan_name: string;
+	async function savePlanAs( new_name: string )
+	{
+		// Change the name of the plan we're working on
+		plan.update( p => {
+			p.name = new_name;
+			return p;
+		});
+
+		// Update the index of all plans
+		const index = await Database.get<Set<ModPlan>>( 'all_plans' );
+		index.add( get( plan ) );
+		await Database.put( index , 'all_plans', );
+
+		// Write the new plan to the database
+		await Database.put( get( plan ) );
+	}
+
 	async function addModFromURL( url: string )
 	{
 		const mod = await MakeModFromURL( url );
+		await Database.put( mod ); // Ensure the mod we just make gets added to the database
 		plan.update( p => {
 			p.add( mod );
 			return p;
@@ -52,21 +94,56 @@
 	$: mods_in_plan = $plan.allMods;
 	$: {
 		loadPlan( plan_name );
+		localStorage.setItem( "active_plan_uuid", plan_name );
 	}
 
 	onDestroy( async () => {
 		await savePlan();
 	})
+
+	export const snapshot: Snapshot<{ x: number, y: number }> = {
+		capture: () => {
+			return {
+				x: window.scrollX,
+				y: window.scrollY
+			}
+		},
+		restore: ( pos ) => {
+			setTimeout( () => {
+				window.scroll({
+					top:  pos.y,
+					left: pos.x,
+					behavior: 'instant'
+				})
+			}, 1 );
+		}
+	}
+
+	function onWindowKeyUp( e: KeyboardEvent ) {
+		if ( e.ctrlKey && e.key === 's' ) {
+			savePlan();
+		}
+	}
 </script>
 
+<svelte:window
+	on:keyup={ onWindowKeyUp }
+/>
 <main class="container">
 	<header>
-		<a href="/">Home</a>
-		<h1>Plan: {$plan.name}</h1>
-		<input type="text" placeholder="Mod Source" bind:value={add_mod_url} />
-		<button on:click={() => addModFromURL(add_mod_url)}>Add Mod</button>
-		<button on:click={() => savePlan()}>Save</button>
-		<button on:click={() => reload()}>Reload</button>
+		<div class="plan_details">
+			<a href="/">Home</a>
+			<h1>Plan: {$plan.name}</h1>
+			<button on:click={() => savePlan()}>Save</button>
+			<button on:click={() => reload()}>Reload</button>
+			<button on:click={() => exportPlan()}>Export</button><br/>
+			<input type="text" placeholder="New Mod Name" bind:value={new_plan_name} />
+			<button on:click={() => savePlanAs( new_plan_name ) }>Save As</button>
+		</div>
+		<div class="plan_actions">
+			<input type="text" placeholder="Mod Source" bind:value={add_mod_url} />
+			<button on:click={() => addModFromURL(add_mod_url)}>Add Mod</button>
+		</div>
 	</header>
 
 	<mods>
@@ -78,22 +155,42 @@
 </main>
 
 <style lang='scss'>
-	mods {
-		margin-top: 10em;
+	main {
+		position: relative;
 
-		width: 500px;
-		display: flex;
-		flex-direction: column;
+		header {
+			display:  block;
+			position: sticky;
+			z-index: 999;
+			top: 0px;
+
+			background: #222;
+			padding: 1em;
+			margin: 0;
+
+			border: solid #DDD 1px;
+			border-top: none;
+			border-bottom: solid 1px white;
+			border-bottom-left-radius: 1em;
+			border-bottom-right-radius: 1em;
+		}
+
+		mods {
+			display: flex;
+			flex-direction: column;
+
+			align-items: stretch;
+		}
 	}
 
 	header {
-		position: fixed;
-		top: 0;
-		left: 0;
-		right: 0;
-
-		padding: 1em;
-
-		background: #222;
+		h1 {
+			margin-bottom: 0.1em;
+		}
+		.plan_details {
+			border-bottom: solid 3px #DDD;
+			padding-bottom: 1.5em;
+			margin-bottom: 1.5em;
+		}
 	}
 </style>

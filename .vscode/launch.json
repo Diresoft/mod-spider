@@ -11,7 +11,7 @@
 			"port": 1422,
 			"webRoot": "${workspaceFolder}",
 			"sourceMaps": true,
-			"preLaunchTask": "ui:dev"
+			// "preLaunchTask": "ui:dev"
 		},
 		// {
 		// 	"type": "lldb",

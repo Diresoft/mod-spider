@@ -4,12 +4,15 @@
     import { Database } from "@lib/db";
     import { onMount } from "svelte";
     import { get, writable } from "svelte/store";
+	
+	// Force these types to be processed so they're in the serialization reverse lookup
+	import { GenericWebMod } from "@lib/adapter/GenericWebMod";
+	import { NxmMod } from "@lib/adapter/Nexusmods";
 
 	let plan_name: string;
 
 	let all_plans = writable( new Set<ModPlan>() );
-	$: all_plans_arr = $all_plans.values();
-
+	
 	onMount( async () => {
 		// all_plans.set( await Database.get( 'all_plans' ) ?? new Set() );
 		all_plans.set( await getPlans() );
@@ -17,11 +20,11 @@
 
 	async function getPlans()
 	{
-		return ( await Serializable.Hydrate<Set<ModPlan>>( "all_plans" ) ) ?? new Set();;
+		return ( await Database.get<Set<ModPlan>>( 'all_plans' ) ) ?? new Set();
 	}
 	async function savePlans()
 	{
-		await Serializable.GetDataProviderFor( Set ).put( "all_plans", await Serializable.Dehydrate( get( all_plans ) ) );
+		await Database.put( get( all_plans ), 'all_plans' );
 	}
 
 	async function addPlan()
@@ -49,10 +52,22 @@
 </script>
 
 <article>
+	<header>Graph:</header>
+	<section>
+		<ul>
+			{#each $all_plans.values() as plan}
+				<li>
+					<button on:click={()=>{ deletePlan( plan ) }}>-</button>
+					<a href="/graph/{plan.name}">{plan.name}</a>
+				</li>
+			{/each}
+		</ul>
+	</section>
+
 	<header>Plans:</header>
 	<section>
 		<ul>
-			{#each all_plans_arr as plan}
+			{#each $all_plans.values() as plan}
 				<li>
 					<button on:click={()=>{ deletePlan( plan ) }}>-</button>
 					<a href="/plan/{plan.name}">{plan.name}</a>
@@ -60,6 +75,7 @@
 			{/each}
 		</ul>
 	</section>
+	
 	<section>
 		<input type="text" bind:value={plan_name}/>
 		<button on:click={addPlan}>Add Plan</button>

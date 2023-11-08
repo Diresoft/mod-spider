@@ -5,11 +5,22 @@ import { Serializable, type Immutable } from "../Serialize";
 import { DateTime, Duration } from 'luxon';
 import { scopedStorage } from "./scopedLocalStorage";
 import { Database } from "@lib/db";
+import { NodeHtmlMarkdown } from 'node-html-markdown'
 
 
 export const nexusmodsStorage = scopedStorage.scope( "nxmInfo" );
 
 /** All information scraped off a Nexusmods Mod Page */
+@Serializable({
+	uuidProvider( instance ){ return instance.uuid }
+})
+export class NxmFile {
+	uuid!:        string;
+	name?:        string;
+	description?: string;
+	file_id!:     string;
+	link!:         string;
+}
 type NxmModInfo = {
 	cache_ts:    DateTime;
 
@@ -18,8 +29,14 @@ type NxmModInfo = {
 
 	title:       string;
 	description: string;
+	details:     string;
 	image:       string;
-	requirements: { link: string, note: string }[]
+
+	requirements: { link: string, note: string }[];
+
+	main_files:     Set<NxmFile>;
+	optional_files: Set<NxmFile>;
+	old_files:      Set<NxmFile>;
 }
 
 /** Expands the base mod class with support for Nexusmods specific data */
@@ -34,9 +51,13 @@ export class NxmMod extends Mod
 	protected src_info: NxmModInfo;
 	public get source_info(): Readonly<NxmModInfo> { return this.src_info; } // For reading values only
 
-	// public image: string;
-	public url:   string;
-	public nxmId: string;
+	public url:     string;
+	public nxmId:   string;
+	public details: string;
+
+	public main_files:      Set<NxmFile> = new Set();
+	public optional_files?: Set<NxmFile>;
+	public old_files?:      Set<NxmFile>;
 
 	constructor( nmInfo: NxmModInfo )
 	{
@@ -46,11 +67,13 @@ export class NxmMod extends Mod
 		// Initial configuration copies the source into all fields
 		this.title           = nmInfo.title;
 		this.description     = nmInfo.description;
+		this.details         = nmInfo.details;
 		this.cover_image_uri = nmInfo.image;
 		this.url             = nmInfo.url;
 		this.nxmId           = nmInfo.nxmId;
 
 		this.resetRequirements();
+		this.resetFiles();
 	}
 
 	async reload()
@@ -58,13 +81,25 @@ export class NxmMod extends Mod
 		this.src_info = await NxmApi.getModInfo( this.src_info.url );
 	}
 
-	resetRequirements()
+	public resetRequirements()
 	{
 		this.requirements = new Set();
 		for( const [_, requirement] of this.src_info.requirements.entries() )
 		{
 			this.requirements.add( new NxmModLink( requirement ) );
 		}
+	}
+
+	public resetFiles()
+	{
+		this.main_files = new Set();
+		this.src_info.main_files?.forEach( fd => this.main_files?.add( fd ) );
+
+		this.optional_files = new Set();
+		this.src_info.optional_files?.forEach( fd => this.optional_files?.add( fd ) );
+		
+		this.old_files = new Set();
+		this.src_info.old_files?.forEach( fd => this.old_files?.add( fd ) );
 	}
 }
 
@@ -89,7 +124,7 @@ export class NxmModLink extends ModLink<NxmMod>
 
 	constructor( link_info: { link: string, note: string } )
 	{
-		super( nxmUrlToUuid( link_info.link ) );
+		super( NxmMod.urlToUuid( link_info.link ) );
 		this.link_url = link_info.link;
 		this.note     = link_info.note;
 	}
@@ -135,6 +170,7 @@ class NxmApiSingleton
 
 		return cached; // Either revived and not expired or undefined
 	}
+
 	public async getModInfo( url: string ): Promise<NxmModInfo>
 	{
 		let cached = this.loadCached( url );
@@ -146,26 +182,32 @@ class NxmApiSingleton
 			url,
 			nxmId: NxmApiSingleton.parseNxmId( url )
 		} as NxmModInfo;
-		const response = await fetch( url, {
+
+
+		// !!! FRAGILE HTML PARSING !!!
+		
+		// Markdown transformer
+		const nhm = new NodeHtmlMarkdown()
+
+		// Basic metadata
+		const mp_response = await fetch( url, {
 			method: 'GET',
 			responseType: ResponseType.Text
 		} );
-		const dom = new JSDOM( response.data, {
+		const mp_dom = new JSDOM( mp_response.data, {
 			url,
 			runscripts: "dangerously",
 			pretendToBeVisual: true
 		});
 		
-		// !!! FRAGILE HTML PARSING !!!
-		const document = dom.window.document;
+		const mp_doc = mp_dom.window.document;
 	
-		// Basic metadata
-		cached.title 		= ( document.querySelector( `meta[property='og:title']`)		as HTMLMetaElement ).content;
-		cached.description	= ( document.querySelector( `meta[property='og:description']`)	as HTMLMetaElement ).content;
-		cached.image		= ( document.querySelector( `meta[property='og:image']`)		as HTMLMetaElement ).content;
+		cached.title 		= ( mp_doc.querySelector( `meta[property='og:title']`)		as HTMLMetaElement ).content;
+		cached.description	= ( mp_doc.querySelector( `meta[property='og:description']`)	as HTMLMetaElement ).content;
+		cached.image		= ( mp_doc.querySelector( `meta[property='og:image']`)		as HTMLMetaElement ).content;
 	
 		cached.requirements = [];
-		const tabbed_blocks = document.querySelectorAll( '.tabbed-block' );
+		const tabbed_blocks = mp_doc.querySelectorAll( '.tabbed-block' );
 		for( const block of tabbed_blocks )
 		{
 			const header = block.querySelector( 'h3' )?.innerHTML;
@@ -179,8 +221,96 @@ class NxmApiSingleton
 				for( let i = 0; i < links.length; ++i )
 				{
 					const link = links[i].getAttribute( 'href' );
+					if ( link === null ) throw new Error( `Requirement link was null while parsing Nexus Mods page` );
 					cached.requirements.push( { link, note: notes[i]?.innerHTML } );
 				}
+			}
+		}
+
+		cached.details = nhm.translate( mp_doc.querySelector( `.mod_description_container` )?.innerHTML ?? "");
+
+		// Parse available files for download
+		const fp_response = await fetch( `${url}?tab=files`, {
+			method: 'GET',
+			responseType: ResponseType.Text
+		})
+		const fp_dom = new JSDOM( fp_response.data, {
+			url: `${url}?tab=files`,
+			runscripts: "dangerously",
+			pretendToBeVisual: true
+		});
+		const fp_doc = fp_dom.window.document as Document;
+
+		const main_files_container     = fp_doc.getElementById( "file-container-main-files"     );
+		if ( main_files_container !== null )
+		{
+			cached.main_files = new Set();
+
+			const file_headers = main_files_container.querySelectorAll<HTMLElement>( `dt.file-expander-header` );
+			const file_data    = main_files_container.querySelectorAll<HTMLElement>( `dd` );
+	
+			for( let idx = 0; idx < (file_headers?.length ?? 0); ++idx )
+			{
+				const headerEl = file_headers[ idx ];
+				const dataEl   = file_data   [ idx ];
+				const file       = new NxmFile();
+				file.name        = headerEl.dataset.name ?? "Unknown File"
+				file.description = nhm.translate( dataEl.querySelector( '.files-description' )?.innerHTML ?? "")
+				file.file_id     = headerEl.dataset.id ?? "-1"
+				file.uuid        = `nxmFile_${file.file_id}`
+				file.link        = `https://www.nexusmods.com/skyrimspecialedition/mods/${cached.nxmId}?tab=files&file_id=${file.file_id}&nmm=1`
+				await Database.put( file );
+
+				cached.main_files.add( file )
+			}
+		}
+
+		const optional_files_container = fp_doc.getElementById( "file-container-optional-files" );
+		if ( optional_files_container !== null )
+		{
+			cached.optional_files = new Set();
+
+			const file_headers = optional_files_container.querySelectorAll<HTMLElement>( `dt.file-expander-header` );
+			const file_data    = optional_files_container.querySelectorAll<HTMLElement>( `dd` );
+	
+			for( let idx = 0; idx < (file_headers?.length ?? 0); ++idx )
+			{
+				const headerEl = file_headers[ idx ];
+				const dataEl   = file_data   [ idx ];
+				const file       = new NxmFile();
+				file.name        = headerEl.dataset.name ?? "Unknown File"
+				file.description = nhm.translate( dataEl.querySelector( '.files-description' )?.innerHTML ?? "")
+				file.file_id     = headerEl.dataset.id ?? "-1"
+				file.uuid        = `nxmFile_${file.file_id}`
+				file.link        = `https://www.nexusmods.com/skyrimspecialedition/mods/${cached.nxmId}?tab=files&file_id=${file.file_id}&nmm=1`
+				await Database.put( file );
+
+				cached.optional_files.add( file )
+			}
+		}
+
+		const old_files_container      = fp_doc.getElementById( "file-container-old-files"      );
+		if ( old_files_container !== null )
+		{
+			cached.old_files = new Set();
+
+			const file_headers = old_files_container.querySelectorAll<HTMLElement>( `dt.file-expander-header` );
+			const file_data    = old_files_container.querySelectorAll<HTMLElement>( `dd` );
+	
+			for( let idx = 0; idx < (file_headers?.length ?? 0); ++idx )
+			{
+				const headerEl = file_headers[ idx ];
+				const dataEl   = file_data   [ idx ];
+
+				const file       = new NxmFile();
+				file.name        = headerEl.dataset.name ?? "Unknown File"
+				file.description = nhm.translate( dataEl.querySelector( '.files-description' )?.innerHTML ?? "")
+				file.file_id     = headerEl.dataset.id ?? "-1"
+				file.uuid        = `nxmFile_${file.file_id}`
+				file.link        = `https://www.nexusmods.com/skyrimspecialedition/mods/${cached.nxmId}?tab=files&file_id=${file.file_id}&nmm=1`
+				await Database.put( file );
+
+				cached.old_files.add( file )
 			}
 		}
 

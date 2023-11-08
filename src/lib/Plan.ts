@@ -1,28 +1,99 @@
+import { get, writable, type Writable } from "svelte/store";
 import { Mod, ModLink } from "./Mod";
-import { Serializable, type Immutable } from "./Serialize";
+import { Serializable, type Immutable, type JsonType } from "./Serialize";
+import { NxmMod, type NxmFile } from "./adapter/Nexusmods";
+import { Database } from "./db";
 
-export type LinkDetail = { requiredBy: Mod, notes: string };
+export class PlanModData
+{
+	public isInstalled:   boolean     = false;
+	public selectedFiles: Set<string> = new Set();
+	public skipped_requirements: Set<string> = new Set();
+}
 
 @Serializable({
 	uuidProvider( instance: Immutable<ModPlan> ): string {
 		return instance.name;
+	},
+	async dehydrator( instance: Immutable<ModPlan> ): Promise<any> {
+		let out = Object.assign( {}, instance ) as Partial<ModPlan>;
+
+		out.mods = new Set( (instance as ModPlan).mods.keys() ) as any;
+		delete out.incompatible_with_lut;
+		delete out.required_by_lut;
+
+		const mod_data = out.plan_data as Map<string, Writable<PlanModData>>;
+		for( const [ key, data ] of mod_data ) {
+			let pd;
+			try {
+				pd = get( data );
+			}catch(_) {
+				pd = data;
+			}
+			out.plan_data?.set( key, pd as any );
+		}
+
+		return out;
+	},
+	async hydrator( data: any ): Promise<ModPlan> {
+		let out = (data ?? {}) as Partial<(JsonType<ModPlan> & { mods: Map<string, Mod> })>;
+
+		const mod_ids = (out?.mods ?? new Set()) as any as Set<string>;
+		out.mods = new Map();
+
+		for( const id of mod_ids )
+		{
+			out.mods.set( id, await Database.get( id ) );
+		}
+
+		const mod_data = out.plan_data as Map<string, PlanModData>;
+		out.plan_data = new Map();
+		for( const [ key, data ] of mod_data )
+		{
+			(out.plan_data as Map<string, Writable<PlanModData>>).set( key, writable( data ) );
+		} 
+		
+		return out as ModPlan;
 	}
 })
 export class ModPlan
 {
+	// Saved Properties
 	public name: string;
-	protected mods: Map<string, Mod> = new Map();
+	public mods: Map<string, Mod>              = new Map();
+	public plan_data: Map<string, Writable<PlanModData>> = new Map();
+	public tag_lut: Map<string, string[]>      = new Map();
+
+	// Transient Properties
 	public required_by_lut:       Map<string, Mod[]> = new Map();
 	public incompatible_with_lut: Map<string, Mod[]> = new Map();
+	
 
 	public get allMods(): Mod[]
 	{
 		return Array.from( this.mods.values() );
 	}
+
+	public get modsByGroup(): Map<string, Mod[]>
+	{
+		let out = new Map();
+
+		return out;
+	}
+
 	constructor( name: string = 'plan' ) {
 		this.name = name;
 	}
 	
+	public tagMod( mod: Mod, tag: string )
+	{
+		if ( !this.tag_lut.has( mod.uuid ) )
+		{
+			this.tag_lut.set( mod.uuid, [] );
+		}
+		( this.tag_lut.get( mod.uuid ) as string[] ).push( tag );
+	}
+
 	public add( mod: Mod ): ModPlan
 	{
 		this.mods.set( mod.uuid, mod );
@@ -42,6 +113,7 @@ export class ModPlan
 	public remove( mod: Mod ): void
 	{
 		this.mods.delete( mod.uuid );
+		this.plan_data.delete( mod.uuid ); // Remove data for this mod too
 		this.process();
 	}
 
@@ -100,5 +172,12 @@ export class ModPlan
 	public getModsIncompatibleWith( mod: Mod): Readonly<Mod>[]
 	{
 		return this.incompatible_with_lut.get( mod.uuid ) ?? [];
+	}
+
+	public getDataFor( mod: Mod ): Writable<PlanModData>
+	{
+		let pd = this.plan_data.get( mod.uuid ) ?? writable( new PlanModData() );
+		this.plan_data.set( mod.uuid, pd );
+		return pd;
 	}
 }

@@ -13,11 +13,35 @@
   "tauri": {
     "allowlist": {
       "all": false,
-	  "http": {
-		"all": true,
-		"request": false,
-		"scope": [ "https://*", "http://*" ]
-	  }
+      "fs": {
+        "all": false,
+        "copyFile": false,
+        "createDir": false,
+        "exists": false,
+        "readDir": false,
+        "readFile": true,
+        "removeDir": false,
+        "removeFile": false,
+        "renameFile": false,
+        "scope": [],
+        "writeFile": true
+      },
+      "dialog": {
+        "all": false,
+        "ask": false,
+        "confirm": false,
+        "message": false,
+        "open": true,
+        "save": true
+      },
+      "path": {
+        "all": true
+      },
+      "http": {
+        "all": true,
+        "request": false,
+        "scope": [ "https://*", "http://*" ]
+      }
     },
     "bundle": {
       "active": true,
@@ -34,7 +58,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "com.diresoft.modplanner",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
