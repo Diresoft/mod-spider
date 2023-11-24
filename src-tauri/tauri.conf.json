@@ -14,17 +14,10 @@
     "allowlist": {
       "all": false,
       "fs": {
-        "all": false,
-        "copyFile": false,
-        "createDir": false,
-        "exists": false,
-        "readDir": false,
-        "readFile": true,
-        "removeDir": false,
-        "removeFile": false,
-        "renameFile": false,
-        "scope": [],
-        "writeFile": true
+        "all": true,
+        "scope": [
+          "$APPDATA\\**"
+        ]
       },
       "dialog": {
         "all": false,
@@ -41,6 +34,12 @@
         "all": true,
         "request": false,
         "scope": [ "https://*", "http://*" ]
+      },
+      "protocol": {
+        "asset": true,
+        "assetScope": [
+          "$APPDATA\\**"
+        ]
       }
     },
     "bundle": {

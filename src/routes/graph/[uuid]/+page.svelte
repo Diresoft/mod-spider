@@ -1,7 +1,7 @@
 <script lang='ts'>
     import { page } from '$app/stores';
-    import { ModPlan } from '@lib/Plan';
-    import { Database } from '@lib/db';
+    import { ModPlan } from '$lib/Plan';
+    import { Database } from '$lib/db_json';
     import { setContext } from 'svelte';
     import { writable, type Writable } from 'svelte/store';
     import { Node, Svelvet, Minimap, Controls } from 'svelvet';

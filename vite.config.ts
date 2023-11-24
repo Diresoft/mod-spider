@@ -1,6 +1,9 @@
 import { defineConfig } from "vite";
 import { sveltekit } from '@sveltejs/kit/vite';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import Icons from 'unplugin-icons/vite';
+import IconsResolver from 'unplugin-icons/resolver';
+import AutoImport from 'unplugin-auto-import/vite';
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
@@ -10,7 +13,19 @@ export default defineConfig(async () => ({
 				process: true
 			}
 		}),
-		sveltekit()
+		sveltekit(),
+		Icons({
+		  compiler: 'svelte',
+		  autoInstall: true
+		}),
+		AutoImport({
+			resolvers: [
+				IconsResolver({
+					prefix: 'Icon',
+					extension: 'svelte'
+				})
+			]
+		})
 	],
 
 	// Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`

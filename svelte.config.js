@@ -1,5 +1,6 @@
 import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/kit/vite';
+import { resolve } from 'node:path'
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -12,8 +13,7 @@ const config = {
 			fallback: 'app.html'
 		}),
 		alias: {
-			'@scss': './src/!_scss',
-			'@lib': './src/lib'
+			'$scss': resolve( './src/!_scss' ),
 		}
 	}
 };

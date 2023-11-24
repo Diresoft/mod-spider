@@ -1,0 +1,4 @@
+@use './colours.scss';
+
+// Gradient Type 1
+$bg_1: linear-gradient(to right, rgba( colours.$light, 0.5 ), rgba( colours.$accent_1, 0.5 ), rgba( colours.$dark, 0.5 ));

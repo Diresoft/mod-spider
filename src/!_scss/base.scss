@@ -1,17 +1,28 @@
+@forward '$scss/theme';
+@use     '$scss/theme';
+
+@import '$scss/reset';
+
 html {
-	background-color: #333;
-	color: #EEE;
+	background-color: theme.$dark;
+	color:            theme.$light;
 
 	box-sizing: border-box;
 	* {
 		box-sizing: border-box;
+		user-select: none;
 	}
 
 	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
+
+p {
+	user-select: auto;
+}
+
 body {
-	padding: 0;
-	margin: 0;
+	height:          100vh;
+	width:           100vw;
 }
 
 a {
@@ -19,4 +30,8 @@ a {
 	&:visited {
 		color: #FDD;
 	}
+}
+
+spacer {
+	flex-grow: 1;
 }

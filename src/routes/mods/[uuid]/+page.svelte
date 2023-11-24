@@ -1,20 +1,20 @@
 <script lang="ts">
     import { page } from "$app/stores";
-    import { NxmMod } from "@lib/adapter/Nexusmods";
-    import { Database } from "@lib/db";
+    import { NxmMod } from "$lib/adapter/Nexusmods";
+    import { Database } from "$lib/db_json";
     import { get, writable, type Writable } from "svelte/store";
     import { getContext } from "svelte";
-    import type { ModPlan } from "@lib/Plan";
-    import { GenericWebMod } from "@lib/adapter/GenericWebMod";
-    import type { Mod, ModLink } from "@lib/Mod";
-    import { MakeModLinkFromUrl } from "@lib/ModHelper";
+    import type { ModPlan } from "$lib/Plan";
+    import { GenericWebMod } from "$lib/adapter/GenericWebMod";
+    import type { __DEPRECATED__Mod, ModLink } from "$lib/Mod";
+    import { MakeModLinkFromUrl } from "$lib/ModHelper";
     import SvelteMarkdown from "svelte-markdown";
 	import Icon from '@iconify/svelte';
 
-	let mod: Writable<Mod> = writable( new GenericWebMod( 'null_mod' ) );
+	let mod: Writable<__DEPRECATED__Mod> = writable( new GenericWebMod( 'null_mod' ) );
 	
 	$: {
-		Database.get<Mod>( $page.params.uuid ).then( ( m ) => {
+		Database.get<__DEPRECATED__Mod>( $page.params.uuid ).then( ( m ) => {
 			mod.set( m );
 		})
 	}

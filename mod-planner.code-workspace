@@ -1,6 +1,31 @@
 {
 	"folders": [
 		{
+			"name": "🕸️ Routes",
+			"path": "./src/routes"
+		},
+		{
+			"name": "⌨️ TypeScript",
+			"path": "./src/lib"
+		},
+		{
+			"name": "📺 Style",
+			"path": "./src/!_scss"
+		},
+		{
+			"name": "🖼️ Media",
+			"path": "./static"
+		},
+		{
+			"name": "✒️ Art Source",
+			"path": "./src-art"
+		},
+		{
+			"name": "⌨️ Tauri",
+			"path": "./src-tauri"
+		},
+		{
+			"name": "./",
 			"path": "."
 		}
 	],
