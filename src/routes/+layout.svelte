@@ -1,6 +1,6 @@
 <script lang="ts" context="module">
 	/** A globally accesible parameter to specify which game has been selected */
-	export let SelectedGame: Game | undefined;
+	export let SelectedGame: Writable<Game | undefined> = writable( undefined );
 	
 </script>
 <script lang='ts'>
@@ -9,6 +9,7 @@
 
 	// Global Fonts
 	import '@fontsource/mirza';
+	import '@fontsource-variable/montserrat';
 
 	// Page Imports
     import type { Game } from "$lib/database/objects/Game";
@@ -21,7 +22,8 @@
     import { ScreenBlockingSpinner, SpinnerHandle } from '$lib/svelte/helpers/SpinnerHandle';
     import Spinner from './components/Element/Spinner.svelte';
     import GameIcon from './components/Element/GameIcon.svelte';
-    import { cubicOut } from 'svelte/easing';
+    import { sleep } from '$lib/util/Utility';
+    import { writable, type Writable } from 'svelte/store';
 
 	// Exposed/Global Members
 	
@@ -30,15 +32,16 @@
 	let games = liveQuery( () => {
 		return global_db.games.toArray();
 	})
-	let wide_nav: boolean = true;
+	let wide_nav: boolean = false;
 
 	// Dynamic
 
 	async function setSelectedGame( game: Game )
 	{
-		SelectedGame = game;
+		SelectedGame.set( game );
 		await setGame( game );
-		goto( `/game/${SelectedGame.id}` );
+		await sleep(1000);
+		goto( `/game/${game.id}` );
 	}
 
 </script>
@@ -46,14 +49,14 @@
 <article>
 	<nav class:wide={wide_nav}>
 		<!-- Selected Game -->
-		{#key SelectedGame}
-			{#if SelectedGame !== undefined }
+		{#key $SelectedGame}
+			{#if $SelectedGame !== undefined }
 				<span transition:slide={{duration: 250}} class='selected'>
-					<icon><GameIcon game={SelectedGame} /></icon>
+					<icon><GameIcon game={$SelectedGame} /></icon>
 					<!-- {#if wide_nav} -->
-						<span>
-							{SelectedGame.title}
-						</span>
+						<title class:wide={wide_nav}>
+							{$SelectedGame.title}
+						</title>
 					<!-- {/if} -->
 				</span>
 			{/if}
@@ -61,13 +64,13 @@
 		<hr/>
 		<!-- Game List -->
 		{#each $games ?? [] as game}
-			{#if game !== SelectedGame}
-				<span transition:slide={{duration: 250}}>
+			{#if game !== $SelectedGame}
+				<span transition:slide={{duration: 250}} on:click={() => ScreenBlockingSpinner.waitFor( setSelectedGame( game ) ) }>
 					<icon><GameIcon game={game} /></icon>
 					<!-- {#if wide_nav} -->
-						<span>
+						<title class:wide={wide_nav}>
 							{game.title}
-						</span>
+						</title>
 					<!-- {/if} -->
 				</span>
 			{/if}
@@ -137,23 +140,53 @@
 				align-items:     center;
 				justify-content: space-between;
 
+				padding: 0.25em;
+
+				cursor: pointer;
+
 				icon {
 					position: relative;
-					display:  inline-block;
+					display:  block;
 
-					border: solid 1px red;
 					border-radius: 0.5em;
 
 					width: 5em;
+					flex-shrink: 0;
 
 					overflow: hidden;
-					flex-shrink: 0;
+					border: solid 1px transparent;
+					transition: border-color 250ms ease;
 				}
-				& > span {
-					display: inline-block;
 
-					border: solid 1px green;
-					flex-shrink: 1;
+				& > title {
+					position: relative;
+					display: block;
+
+					white-space: pre;
+					text-align: center;
+					overflow: hidden;
+
+					margin-left: 0em;
+					width:       0em;
+					opacity:     0;
+					transition:
+						margin-left 250ms ease,
+						width       250ms ease,
+						opacity     250ms ease
+					;
+					&.wide {
+						margin-left: 0.25em;
+						width:       10em;
+						opacity:     1;
+					}
+				}
+
+				transition: background-color 250ms ease;
+				&:hover {
+					background-color: color.scale( theme.$accent_2, $alpha: -50% );
+					icon {
+						border-color: white;
+					}
 				}
 			}
 
